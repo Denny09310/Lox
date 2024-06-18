@@ -1,6 +1,6 @@
 ﻿namespace Lox;
 
-internal class Resolver(Interpreter interpreter) : Expr.IVisitor<object?>, Statement.IVisitor<object?>
+internal class Resolver(Interpreter interpreter) : Expression.IVisitor<object?>, Statement.IVisitor<object?>
 {
     private readonly Stack<Dictionary<string, bool>> _scopes = new();
     private ClassType _currentClass = ClassType.NONE;
@@ -26,7 +26,7 @@ internal class Resolver(Interpreter interpreter) : Expr.IVisitor<object?>, State
         if (_scopes.Count == 0) return;
 
         Dictionary<string, bool> scope = _scopes.Peek();
-        if (!scope.TryAdd(name.lexeme, false))
+        if (!scope.TryAdd(name.Lexeme, false))
         {
             Lox.Error(name, "Variable with this name already declared in this scope.");
         }
@@ -36,9 +36,9 @@ internal class Resolver(Interpreter interpreter) : Expr.IVisitor<object?>, State
     {
         if (_scopes.Count == 0) return;
 
-        if (_scopes.Peek().ContainsKey(name.lexeme))
+        if (_scopes.Peek().ContainsKey(name.Lexeme))
         {
-            _scopes.Peek()[name.lexeme] = true;
+            _scopes.Peek()[name.Lexeme] = true;
         }
         else
         {
@@ -56,7 +56,7 @@ internal class Resolver(Interpreter interpreter) : Expr.IVisitor<object?>, State
         stmt.Accept(this);
     }
 
-    private void Resolve(Expr expr)
+    private void Resolve(Expression expr)
     {
         expr.Accept(this);
     }
@@ -79,11 +79,11 @@ internal class Resolver(Interpreter interpreter) : Expr.IVisitor<object?>, State
         _currentFunction = enclosingFunction;
     }
 
-    private void ResolveLocal(Expr expr, Token name)
+    private void ResolveLocal(Expression expr, Token name)
     {
         for (int i = _scopes.Count - 1; i >= 0; i--)
         {
-            if (_scopes.ToArray()[i].ContainsKey(name.lexeme))
+            if (_scopes.ToArray()[i].ContainsKey(name.Lexeme))
             {
                 interpreter.Resolve(expr, _scopes.Count - 1 - i);
                 return;
@@ -97,36 +97,36 @@ internal class Resolver(Interpreter interpreter) : Expr.IVisitor<object?>, State
 
     #region "Statement Visitors"
 
-    public object? Visit(Statement.Block _block)
+    public object? Visit(Statement.Block statement)
     {
         BeginScope();
-        Resolve(_block.Statements);
+        Resolve(statement.Statements);
         EndScope();
 
         return null;
     }
 
-    public object? Visit(Statement.Class _class)
+    public object? Visit(Statement.Class statement)
     {
         ClassType enclosingClass = _currentClass;
         _currentClass = ClassType.CLASS;
 
-        Declare(_class.Name);
-        Define(_class.Name);
+        Declare(statement.Name);
+        Define(statement.Name);
 
-        if ((_class.Superclass != null) &&
-            _class.Name.lexeme.Equals(_class.Superclass.Name.lexeme))
+        if ((statement.Superclass != null) &&
+            statement.Name.Lexeme.Equals(statement.Superclass.Name.Lexeme))
         {
-            Lox.Error(_class.Superclass.Name, "A class cannot inherit from itself.");
+            Lox.Error(statement.Superclass.Name, "A class cannot inherit from itself.");
         }
 
-        if (_class.Superclass != null)
+        if (statement.Superclass != null)
         {
             _currentClass = ClassType.SUBCLASS;
-            Resolve(_class.Superclass);
+            Resolve(statement.Superclass);
         }
 
-        if (_class.Superclass != null)
+        if (statement.Superclass != null)
         {
             BeginScope();
             _scopes.Peek().Add("super", true);
@@ -135,88 +135,88 @@ internal class Resolver(Interpreter interpreter) : Expr.IVisitor<object?>, State
         BeginScope();
         _scopes.Peek().Add("this", true);
 
-        foreach (Statement.Function method in _class.Methods)
+        foreach (Statement.Function method in statement.Methods)
         {
-            FunctionType declaration = (method.Name.lexeme.Equals("init")) ? FunctionType.INITIALIZER : FunctionType.METHOD;
+            FunctionType declaration = (method.Name.Lexeme.Equals("init")) ? FunctionType.INITIALIZER : FunctionType.METHOD;
             ResolveFunction(method, declaration);
         }
 
         EndScope();
 
-        if (_class.Superclass != null) EndScope();
+        if (statement.Superclass != null) EndScope();
 
         _currentClass = enclosingClass;
         return null;
     }
 
-    public object? Visit(Statement.Expression _expression)
+    public object? Visit(Statement.Inline statement)
     {
-        Resolve(_expression.Body);
+        Resolve(statement.Body);
 
         return null;
     }
 
-    public object? Visit(Statement.Function _function)
+    public object? Visit(Statement.Function statement)
     {
-        Declare(_function.Name);
-        Define(_function.Name);
+        Declare(statement.Name);
+        Define(statement.Name);
 
-        ResolveFunction(_function, FunctionType.FUNCTION);
+        ResolveFunction(statement, FunctionType.FUNCTION);
 
         return null;
     }
 
-    public object? Visit(Statement.If _if)
+    public object? Visit(Statement.If statement)
     {
-        Resolve(_if.Condition);
-        Resolve(_if.ThenBranch);
-        if (_if.ElseBranch != null) Resolve(_if.ElseBranch);
+        Resolve(statement.Condition);
+        Resolve(statement.ThenBranch);
+        if (statement.ElseBranch != null) Resolve(statement.ElseBranch);
 
         return null;
     }
 
-    public object? Visit(Statement.Print _print)
+    public object? Visit(Statement.Print statement)
     {
-        Resolve(_print.Body);
+        Resolve(statement.Body);
 
         return null;
     }
 
-    public object? Visit(Statement.Return _return)
+    public object? Visit(Statement.Return statement)
     {
         if (_currentFunction == FunctionType.NONE)
         {
-            Lox.Error(_return.Keyword, "Cannot return from top-level code.");
+            Lox.Error(statement.Keyword, "Cannot return from top-level code.");
         }
 
-        if (_return.Value != null)
+        if (statement.Value != null)
         {
             if (_currentFunction == FunctionType.INITIALIZER)
             {
-                Lox.Error(_return.Keyword, "Cannot return a value from an initializer.");
+                Lox.Error(statement.Keyword, "Cannot return a value from an initializer.");
             }
-            Resolve(_return.Value);
+            Resolve(statement.Value);
         }
 
         return null;
     }
 
-    public object? Visit(Statement.Var @var)
+    public object? Visit(Statement.Var statement)
     {
-        Declare(@var.Name);
-        if (@var.Initializer != null)
+        Declare(statement.Name);
+        if (statement.Initializer != null)
         {
-            Resolve(@var.Initializer);
+            Resolve(statement.Initializer);
         }
-        Define(@var.Name);
+        Define(statement.Name);
 
         return null;
     }
 
-    public object? Visit(Statement.While _while)
+    public object? Visit(Statement.While statement)
     {
-        Resolve(_while.Condition);
-        Resolve(_while.Body);
+        Resolve(statement.Condition);
+        Resolve(statement.Body);
 
         return null;
     }
@@ -225,27 +225,27 @@ internal class Resolver(Interpreter interpreter) : Expr.IVisitor<object?>, State
 
     #region "Expression Visitors"
 
-    public object? Visit(Expr.Assign _assign)
+    public object? Visit(Expression.Assign expression)
     {
-        Resolve(_assign.Value);
-        ResolveLocal(_assign, _assign.Name);
+        Resolve(expression.Value);
+        ResolveLocal(expression, expression.Name);
 
         return null;
     }
 
-    public object? Visit(Expr.Binary _binary)
+    public object? Visit(Expression.Binary expression)
     {
-        Resolve(_binary.Left);
-        Resolve(_binary.Right);
+        Resolve(expression.Left);
+        Resolve(expression.Right);
 
         return null;
     }
 
-    public object? Visit(Expr.Call _call)
+    public object? Visit(Expression.Call expression)
     {
-        Resolve(_call.Callee);
+        Resolve(expression.Callee);
 
-        foreach (Expr argument in _call.Arguments)
+        foreach (Expression argument in expression.Arguments)
         {
             Resolve(argument);
         }
@@ -253,91 +253,91 @@ internal class Resolver(Interpreter interpreter) : Expr.IVisitor<object?>, State
         return null;
     }
 
-    public object? Visit(Expr.Get _get)
+    public object? Visit(Expression.Get expression)
     {
-        Resolve(_get.Target);
+        Resolve(expression.Target);
 
         return null;
     }
 
-    public object? Visit(Expr.Grouping _grouping)
+    public object? Visit(Expression.Grouping expression)
     {
-        Resolve(_grouping.Expression);
+        Resolve(expression.Expression);
 
         return null;
     }
 
-    public object? Visit(Expr.Literal _literal)
+    public object? Visit(Expression.Literal expression)
     {
         return null;
     }
 
-    public object? Visit(Expr.Logical _logical)
+    public object? Visit(Expression.Logical expression)
     {
-        Resolve(_logical.Left);
-        Resolve(_logical.Right);
+        Resolve(expression.Left);
+        Resolve(expression.Right);
 
         return null;
     }
 
-    public object? Visit(Expr.Set _set)
+    public object? Visit(Expression.Set expression)
     {
-        Resolve(_set.Value);
-        Resolve(_set.Target);
+        Resolve(expression.Value);
+        Resolve(expression.Target);
 
         return null;
     }
 
-    public object? Visit(Expr.Super _super)
+    public object? Visit(Expression.Super expression)
     {
         if (_currentClass == ClassType.NONE)
         {
-            Lox.Error(_super.Keyword, "Cannot use 'super' outside of a class.");
+            Lox.Error(expression.Keyword, "Cannot use 'super' outside of a class.");
         }
         else if (_currentClass != ClassType.SUBCLASS)
         {
-            Lox.Error(_super.Keyword, "Cannot use 'super' in a class with no superclass.");
+            Lox.Error(expression.Keyword, "Cannot use 'super' in a class with no superclass.");
         }
 
-        ResolveLocal(_super, _super.Keyword);
+        ResolveLocal(expression, expression.Keyword);
 
         return null;
     }
 
-    public object? Visit(Expr.This _this)
+    public object? Visit(Expression.This expression)
     {
-        ResolveLocal(_this, _this.Keyword);
+        ResolveLocal(expression, expression.Keyword);
 
         return null;
     }
 
-    public object? Visit(Expr.Prefix _prefix)
+    public object? Visit(Expression.Prefix expression)
     {
-        Resolve(_prefix.Right);
+        Resolve(expression.Right);
 
         return null;
     }
 
-    public object? Visit(Expr.Postfix _postfix)
+    public object? Visit(Expression.Postfix expression)
     {
-        Resolve(_postfix.Left);
+        Resolve(expression.Left);
 
         return null;
     }
 
-    public object? Visit(Expr.Conditional _conditional)
+    public object? Visit(Expression.Conditional expression)
     {
         throw new NotImplementedException();
     }
 
-    public object? Visit(Expr.Variable _variable)
+    public object? Visit(Expression.Variable expression)
     {
-        if (_scopes.Count != 0 && _scopes.Peek().TryGetValue(_variable.Name.lexeme, out bool value) && value == false)
+        if (_scopes.Count != 0 && _scopes.Peek().TryGetValue(expression.Name.Lexeme, out bool value) && !value)
         {
-            Lox.Error(_variable.Name, "Cannot read local variable in its own initializer.");
+            Lox.Error(expression.Name, "Cannot read local variable in its own initializer.");
         }
 
-        ResolveLocal(_variable, _variable.Name);
+        ResolveLocal(expression, expression.Name);
 
         return null;
     }

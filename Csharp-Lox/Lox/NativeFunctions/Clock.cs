@@ -2,8 +2,7 @@
 
 internal class Clock : ICallable
 {
-    public int Arity
-    { get { return 0; } set { } }
+    public int Arity { get; }
 
     public object? Call(Interpreter interpreter, IList<object?> arguments)
     {

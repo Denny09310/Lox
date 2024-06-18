@@ -1,37 +1,25 @@
-﻿
-
-
-
-
-
-
-
-
- 
-using System.Collections.Generic;
-
+﻿ 
 
 namespace Lox;
 
-public abstract class Expr
+public abstract class Expression
 {
-    public interface IVisitor<T> 
+    public interface IVisitor<out T> 
     {
-T Visit(Assign _assign);
-        T Visit(Binary _binary);
-        T Visit(Call _call);
-        T Visit(Get _get);
-        T Visit(Grouping _grouping);
-        T Visit(Literal _literal);
-        T Visit(Logical _logical);
-        T Visit(Set _set);
-        T Visit(Super _super);
-        T Visit(This _this);
-        T Visit(Prefix _prefix);
-        T Visit(Postfix _postfix);
-        T Visit(Conditional _conditional);
-        T Visit(Variable _variable);
-
+        T Visit(Assign expression);
+        T Visit(Binary expression);
+        T Visit(Call expression);
+        T Visit(Get expression);
+        T Visit(Grouping expression);
+        T Visit(Literal expression);
+        T Visit(Logical expression);
+        T Visit(Set expression);
+        T Visit(Super expression);
+        T Visit(This expression);
+        T Visit(Prefix expression);
+        T Visit(Postfix expression);
+        T Visit(Conditional expression);
+        T Visit(Variable expression);
     }
 
 	
@@ -40,41 +28,41 @@ T Visit(Assign _assign);
     /// </summary> 
     public abstract T Accept<T>(IVisitor<T> visitor);
 
-public sealed class Assign(Token name, Expr value) : Expr
+    public sealed class Assign(Token name, Expression value) : Expression
     {
         public Token Name{ get; } = name;
-        public Expr Value{ get; } = value;
+        public Expression Value{ get; } = value;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Binary(Expr left, Token opp, Expr right) : Expr
+    public sealed class Binary(Expression left, Token opp, Expression right) : Expression
     {
-        public Expr Left{ get; } = left;
+        public Expression Left{ get; } = left;
         public Token Opp{ get; } = opp;
-        public Expr Right{ get; } = right;
+        public Expression Right{ get; } = right;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Call(Expr callee, Token paren, List<Expr> arguments) : Expr
+    public sealed class Call(Expression callee, Token paren, List<Expression> arguments) : Expression
     {
-        public Expr Callee{ get; } = callee;
+        public Expression Callee{ get; } = callee;
         public Token Paren{ get; } = paren;
-        public List<Expr> Arguments{ get; } = arguments;
+        public List<Expression> Arguments{ get; } = arguments;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Get(Expr target, Token name) : Expr
+    public sealed class Get(Expression target, Token name) : Expression
     {
-        public Expr Target{ get; } = target;
+        public Expression Target{ get; } = target;
         public Token Name{ get; } = name;
          
         public override T Accept<T>(IVisitor<T> visitor)
@@ -82,47 +70,47 @@ public sealed class Assign(Token name, Expr value) : Expr
             return visitor.Visit(this);
         }
     }
-    public sealed class Grouping(Expr expression) : Expr
+    public sealed class Grouping(Expression expression) : Expression
     {
-        public Expr Expression{ get; } = expression;
+        public Expression Expression{ get; } = expression;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Literal(object value) : Expr
+    public sealed class Literal(object? value) : Expression
     {
-        public object Value{ get; } = value;
+        public object? Value{ get; } = value;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Logical(Expr left, Token opp, Expr right) : Expr
+    public sealed class Logical(Expression left, Token opp, Expression right) : Expression
     {
-        public Expr Left{ get; } = left;
+        public Expression Left{ get; } = left;
         public Token Opp{ get; } = opp;
-        public Expr Right{ get; } = right;
+        public Expression Right{ get; } = right;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Set(Expr target, Token name, Expr value) : Expr
+    public sealed class Set(Expression target, Token name, Expression value) : Expression
     {
-        public Expr Target{ get; } = target;
+        public Expression Target{ get; } = target;
         public Token Name{ get; } = name;
-        public Expr Value{ get; } = value;
+        public Expression Value{ get; } = value;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Super(Token keyword, Token method) : Expr
+    public sealed class Super(Token keyword, Token method) : Expression
     {
         public Token Keyword{ get; } = keyword;
         public Token Method{ get; } = method;
@@ -132,7 +120,7 @@ public sealed class Assign(Token name, Expr value) : Expr
             return visitor.Visit(this);
         }
     }
-    public sealed class This(Token keyword) : Expr
+    public sealed class This(Token keyword) : Expression
     {
         public Token Keyword{ get; } = keyword;
          
@@ -141,38 +129,38 @@ public sealed class Assign(Token name, Expr value) : Expr
             return visitor.Visit(this);
         }
     }
-    public sealed class Prefix(Token opp, Expr right) : Expr
+    public sealed class Prefix(Token opp, Expression right) : Expression
     {
         public Token Opp{ get; } = opp;
-        public Expr Right{ get; } = right;
+        public Expression Right{ get; } = right;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Postfix(Token opp, Expr left) : Expr
+    public sealed class Postfix(Token opp, Expression left) : Expression
     {
         public Token Opp{ get; } = opp;
-        public Expr Left{ get; } = left;
+        public Expression Left{ get; } = left;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Conditional(Expr expression, Expr thenbranch, Expr elsebranch) : Expr
+    public sealed class Conditional(Expression expression, Expression thenbranch, Expression elsebranch) : Expression
     {
-        public Expr Expression{ get; } = expression;
-        public Expr ThenBranch{ get; } = thenbranch;
-        public Expr ElseBranch{ get; } = elsebranch;
+        public Expression Expression{ get; } = expression;
+        public Expression ThenBranch{ get; } = thenbranch;
+        public Expression ElseBranch{ get; } = elsebranch;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Variable(Token name) : Expr
+    public sealed class Variable(Token name) : Expression
     {
         public Token Name{ get; } = name;
          
@@ -181,6 +169,5 @@ public sealed class Assign(Token name, Expr value) : Expr
             return visitor.Visit(this);
         }
     }
-
 }
 

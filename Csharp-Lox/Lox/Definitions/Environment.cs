@@ -29,9 +29,9 @@ public class Environment
 
     public void Assign(Token name, object? value)
     {
-        if (_values.ContainsKey(name.lexeme))
+        if (_values.ContainsKey(name.Lexeme))
         {
-            _values[name.lexeme] = value;
+            _values[name.Lexeme] = value;
             return;
         }
 
@@ -41,13 +41,13 @@ public class Environment
             return;
         }
 
-        throw new RuntimeError(name,
-            "Undefined variable '" + name.lexeme + "'.");
+        throw new RuntimeException(name,
+            "Undefined variable '" + name.Lexeme + "'.");
     }
 
     public void AssignAt(int distance, Token name, object? value)
     {
-        Ancestor(distance)._values.Add(name.lexeme, value);
+        Ancestor(distance)._values.Add(name.Lexeme, value);
     }
 
     //TODO: Handle trying to define a variable that is already defined.
@@ -58,15 +58,15 @@ public class Environment
 
     public object? Get(Token name)
     {
-        if (_values.TryGetValue(name.lexeme, out object? value))
+        if (_values.TryGetValue(name.Lexeme, out object? value))
         {
             return value;
         }
 
         if (Enclosing != null) return Enclosing.Get(name);
 
-        throw new RuntimeError(name,
-            "Undefined variable '" + name.lexeme + "'.");
+        throw new RuntimeException(name,
+            "Undefined variable '" + name.Lexeme + "'.");
     }
 
     public object? GetAt(int distance, string name)

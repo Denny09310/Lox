@@ -1,14 +1,8 @@
 ﻿namespace Lox;
 
-public class Parser
+public class Parser(IList<Token> tokens)
 {
-    private readonly List<Token> tokens;
-    private int current = 0;
-
-    public Parser(List<Token> tokens)
-    {
-        this.tokens = tokens;
-    }
+    private int _current = 0;
 
     /// <summary>
     /// Parses the tokens and returns a list of statements to be executed.
@@ -19,27 +13,29 @@ public class Parser
         List<Statement> statements = [];
         while (!IsAtEnd())
         {
-            statements.Add(Declaration());
+            var declaration = Declaration();
+            if (declaration == null) continue;
+            statements.Add(declaration);
         }
 
         return statements;
     }
 
-    private static ParseError Error(Token token, string message)
+    private static ParseErrorException Error(Token token, string message)
     {
         Lox.Error(token, message);
-        return new ParseError();
+        return new ParseErrorException();
     }
 
-    private Expr Addition()
+    private Expression Addition()
     {
-        Expr expr = Multiplication();
+        Expression expr = Multiplication();
 
         while (Match(TokenType.MINUS, TokenType.PLUS))
         {
             Token opp = Previous();
-            Expr right = Multiplication();
-            expr = new Expr.Binary(expr, opp, right);
+            Expression right = Multiplication();
+            expr = new Expression.Binary(expr, opp, right);
         }
 
         return expr;
@@ -47,42 +43,42 @@ public class Parser
 
     private Token Advance()
     {
-        if (!IsAtEnd()) current++;
+        if (!IsAtEnd()) _current++;
         return Previous();
     }
 
-    private Expr And()
+    private Expression And()
     {
-        Expr expr = Equality();
+        Expression expr = Equality();
 
         while (Match(TokenType.AND))
         {
             Token opp = Previous();
-            Expr right = Equality();
+            Expression right = Equality();
 
-            expr = new Expr.Logical(expr, opp, right);
+            expr = new Expression.Logical(expr, opp, right);
         }
 
         return expr;
     }
 
-    private Expr Assignment()
+    private Expression Assignment()
     {
-        Expr expr = Or();
+        Expression expr = Or();
 
         if (Match(TokenType.EQUAL))
         {
             Token equal = Previous();
-            Expr value = Assignment();
+            Expression value = Assignment();
 
-            if (expr is Expr.Variable v)
+            if (expr is Expression.Variable v)
             {
                 Token name = v.Name;
-                return new Expr.Assign(name, value);
+                return new Expression.Assign(name, value);
             }
-            else if (expr is Expr.Get get)
+            else if (expr is Expression.Get get)
             {
-                return new Expr.Set(get.Target, get.Name, value);
+                return new Expression.Set(get.Target, get.Name, value);
             }
 
             Error(equal, "Invalid assignment target.");
@@ -101,16 +97,18 @@ public class Parser
 
         while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
         {
-            statements.Add(Declaration());
+            var declaration = Declaration();
+            if (declaration == null) continue;
+            statements.Add(declaration);
         }
 
         Consume(TokenType.RIGHT_BRACE, "Expect '}' after block.");
         return statements;
     }
 
-    private Expr Call()
+    private Expression Call()
     {
-        Expr expr = Primary();
+        Expression expr = Primary();
 
         while (true)
         {
@@ -121,7 +119,7 @@ public class Parser
             else if (Match(TokenType.DOT))
             {
                 Token name = Consume(TokenType.IDENTIFIER, "Expect property name after '.'.");
-                expr = new Expr.Get(expr, name);
+                expr = new Expression.Get(expr, name);
             }
             else
             {
@@ -136,25 +134,25 @@ public class Parser
     {
         if (IsAtEnd()) return false;
 
-        return Peek().type == type;
+        return Peek().Type == type;
     }
 
     private bool CheckNext(TokenType type)
     {
         if (IsAtEnd()) return false;
-        if (tokens[current + 1].type == TokenType.EOF) return false;
-        return tokens[current + 1].type == type;
+        if (tokens[_current + 1].Type == TokenType.EOF) return false;
+        return tokens[_current + 1].Type == type;
     }
 
     private Statement.Class ClassDeclaration()
     {
         Token name = Consume(TokenType.IDENTIFIER, "Expect class name.");
 
-        Expr.Variable? superclass = null;
+        Expression.Variable? superclass = null;
         if (Match(TokenType.LESS))
         {
             Consume(TokenType.IDENTIFIER, "Expect superclass name.");
-            superclass = new Expr.Variable(Previous());
+            superclass = new Expression.Variable(Previous());
         }
 
         Consume(TokenType.LEFT_BRACE, "Expect '{' before class body.");
@@ -162,7 +160,7 @@ public class Parser
         List<Statement.Function> methods = [];
         while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
         {
-            methods.Add((Statement.Function)Function("method"));
+            methods.Add(Function("method"));
         }
 
         Consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.");
@@ -170,15 +168,15 @@ public class Parser
         return new Statement.Class(name, superclass, methods);
     }
 
-    private Expr Comparison()
+    private Expression Comparison()
     {
-        Expr expr = Addition();
+        Expression expr = Addition();
 
         while (Match(TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LESS, TokenType.LESS_EQUAL))
         {
             Token opp = Previous();
-            Expr right = Addition();
-            expr = new Expr.Binary(expr, opp, right);
+            Expression right = Addition();
+            expr = new Expression.Binary(expr, opp, right);
         }
 
         return expr;
@@ -195,7 +193,7 @@ public class Parser
     /// Parses and returns a variable or function declaration, if one if there
     /// </summary>
     /// <returns></returns>
-    private Statement Declaration()
+    private Statement? Declaration()
     {
         try
         {
@@ -205,44 +203,43 @@ public class Parser
 
             return Statement();
         }
-        catch (ParseError error)
+        catch (ParseErrorException)
         {
             Synchronize();
-            if (error is null) return null;
             return null;
         }
     }
 
-    private Expr Equality()
+    private Expression Equality()
     {
-        Expr expr = Comparison();
+        Expression expr = Comparison();
 
         while (Match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL))
         {
             Token opp = Previous();
-            Expr right = Comparison();
-            expr = new Expr.Binary(expr, opp, right);
+            Expression right = Comparison();
+            expr = new Expression.Binary(expr, opp, right);
         }
 
         return expr;
     }
 
-    private Expr Expression()
+    private Expression Expression()
     {
         return Assignment();
     }
 
-    private Statement ExpressionStatement()
+    private Statement.Inline ExpressionStatement()
     {
-        Expr expr = Expression();
+        Expression expr = Expression();
         Consume(TokenType.SEMICOLON, "Expect ';' after value.");
 
-        return new Statement.Expression(expr);
+        return new Statement.Inline(expr);
     }
 
-    private Expr FinishCall(Expr callee)
+    private Expression.Call FinishCall(Expression callee)
     {
-        List<Expr> arguments = [];
+        List<Expression> arguments = [];
 
         if (!Check(TokenType.RIGHT_PAREN))
         {
@@ -255,7 +252,7 @@ public class Parser
 
         Token paren = Consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.");
 
-        return new Expr.Call(callee, paren, arguments);
+        return new Expression.Call(callee, paren, arguments);
     }
 
     /// <summary>
@@ -265,7 +262,7 @@ public class Parser
     private Statement ForStatement()
     {
         Consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.");
-        Statement initializer;
+        Statement? initializer;
         if (Match(TokenType.SEMICOLON))
         {
             initializer = null;
@@ -279,14 +276,14 @@ public class Parser
             initializer = ExpressionStatement();
         }
 
-        Expr condition = null;
+        Expression? condition = null;
         if (!Check(TokenType.SEMICOLON))
         {
             condition = Expression();
         }
         Consume(TokenType.SEMICOLON, "Expect ';' after for condition.");
 
-        Expr increment = null;
+        Expression? increment = null;
         if (!Check(TokenType.RIGHT_PAREN))
         {
             increment = Expression();
@@ -297,10 +294,10 @@ public class Parser
 
         if (increment != null)
         {
-            body = new Statement.Block([body, new Statement.Expression(increment)]);
+            body = new Statement.Block([body, new Statement.Inline(increment)]);
         }
 
-        if (condition == null) condition = new Expr.Literal(true);
+        condition ??= new Expression.Literal(true);
         body = new Statement.While(condition, body);
 
         if (initializer != null)
@@ -311,7 +308,7 @@ public class Parser
         return body;
     }
 
-    private Statement Function(string kind)
+    private Statement.Function Function(string kind)
     {
         Token name = Consume(TokenType.IDENTIFIER, "Expect " + kind + " name.");
         Consume(TokenType.LEFT_PAREN, "Expect '(' after " + kind + "name.");
@@ -341,14 +338,14 @@ public class Parser
     /// Parses and returns an 'If' statement.
     /// </summary>
     /// <returns></returns>
-    private Statement IfStatement()
+    private Statement.If IfStatement()
     {
         Consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.");
-        Expr condition = Expression();
+        Expression condition = Expression();
         Consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition.");
 
         Statement thenBranch = Statement();
-        Statement elseBranch = null;
+        Statement? elseBranch = null;
 
         if (Match(TokenType.ELSE))
         {
@@ -360,18 +357,15 @@ public class Parser
 
     private bool IsAtEnd()
     {
-        return Peek().type == TokenType.EOF;
+        return Peek().Type == TokenType.EOF;
     }
 
     private bool Match(params TokenType[] types)
     {
-        foreach (TokenType type in types)
+        if (Array.Exists(types, Check))
         {
-            if (Check(type))
-            {
-                Advance();
-                return true;
-            }
+            Advance();
+            return true;
         }
 
         return false;
@@ -379,42 +373,39 @@ public class Parser
 
     private bool MatchNext(params TokenType[] types)
     {
-        foreach (TokenType type in types)
+        if (Array.Exists(types, CheckNext))
         {
-            if (CheckNext(type))
-            {
-                Advance();
-                return true;
-            }
+            Advance();
+            return true;
         }
 
         return false;
     }
 
-    private Expr Multiplication()
+    private Expression Multiplication()
     {
-        Expr expr = Unary();
+        Expression expr = Unary();
 
         while (Match(TokenType.SLASH, TokenType.STAR))
         {
             Token opp = Previous();
-            Expr right = Unary();
-            expr = new Expr.Binary(expr, opp, right);
+            Expression right = Unary();
+            expr = new Expression.Binary(expr, opp, right);
         }
 
         return expr;
     }
 
-    private Expr Or()
+    private Expression Or()
     {
-        Expr expr = And();
+        Expression expr = And();
 
         while (Match(TokenType.OR))
         {
             Token opp = Previous();
-            Expr right = And();
+            Expression right = And();
 
-            expr = new Expr.Logical(expr, opp, right);
+            expr = new Expression.Logical(expr, opp, right);
         }
 
         return expr;
@@ -422,30 +413,30 @@ public class Parser
 
     private Token Peek()
     {
-        return tokens[current];
+        return tokens[_current];
     }
 
-    private Expr Postfix()
+    private Expression Postfix()
     {
         if (MatchNext(TokenType.PLUS_PLUS, TokenType.MINUS_MINUS))
         {
             Token opp = Peek();
-            current--;
-            Expr left = Primary();
+            _current--;
+            Expression left = Primary();
             Advance();
-            return new Expr.Postfix(opp, left);
+            return new Expression.Postfix(opp, left);
         }
 
         return Call();
     }
 
-    private Expr Prefix()
+    private Expression Prefix()
     {
         if (Match(TokenType.BANG, TokenType.MINUS))
         {
             Token opp = Previous();
-            Expr right = Prefix();
-            return new Expr.Prefix(opp, right);
+            Expression right = Prefix();
+            return new Expression.Prefix(opp, right);
         }
 
         return Call();
@@ -453,18 +444,18 @@ public class Parser
 
     private Token Previous()
     {
-        return tokens[current - 1];
+        return tokens[_current - 1];
     }
 
-    private Expr Primary()
+    private Expression Primary()
     {
-        if (Match(TokenType.FALSE)) return new Expr.Literal(false);
-        if (Match(TokenType.TRUE)) return new Expr.Literal(true);
-        if (Match(TokenType.NIL)) return new Expr.Literal(null);
+        if (Match(TokenType.FALSE)) return new Expression.Literal(false);
+        if (Match(TokenType.TRUE)) return new Expression.Literal(true);
+        if (Match(TokenType.NIL)) return new Expression.Literal(null);
 
         if (Match(TokenType.NUMBER, TokenType.STRING))
         {
-            return new Expr.Literal(Previous().literal);
+            return new Expression.Literal(Previous().Literal);
         }
 
         if (Match(TokenType.SUPER))
@@ -473,38 +464,38 @@ public class Parser
             Consume(TokenType.DOT, "Expect '.' after 'super'.");
             Token method = Consume(TokenType.IDENTIFIER, "Expect superclass method name after '.'");
 
-            return new Expr.Super(keyword, method);
+            return new Expression.Super(keyword, method);
         }
 
-        if (Match(TokenType.THIS)) return new Expr.This(Previous());
+        if (Match(TokenType.THIS)) return new Expression.This(Previous());
 
         if (Match(TokenType.IDENTIFIER))
         {
-            return new Expr.Variable(Previous());
+            return new Expression.Variable(Previous());
         }
 
         if (Match(TokenType.LEFT_PAREN))
         {
-            Expr expr = Expression();
+            Expression expr = Expression();
             Consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.");
-            return new Expr.Grouping(expr);
+            return new Expression.Grouping(expr);
         }
 
         throw Error(Peek(), "Expect expression.");
     }
 
-    private Statement PrintStatement()
+    private Statement.Print PrintStatement()
     {
-        Expr value = Expression();
+        Expression value = Expression();
         Consume(TokenType.SEMICOLON, "Expect ';' after value.");
 
         return new Statement.Print(value);
     }
 
-    private Statement ReturnStatement()
+    private Statement.Return ReturnStatement()
     {
         Token keyword = Previous();
-        Expr value = null;
+        Expression? value = null;
 
         if (!Check(TokenType.SEMICOLON))
         {
@@ -537,9 +528,9 @@ public class Parser
 
         while (!IsAtEnd())
         {
-            if (Previous().type == TokenType.SEMICOLON) return;
+            if (Previous().Type == TokenType.SEMICOLON) return;
 
-            switch (Peek().type)
+            switch (Peek().Type)
             {
                 case TokenType.CLASS:
                 case TokenType.FUN:
@@ -556,23 +547,23 @@ public class Parser
         }
     }
 
-    private Expr Unary()
+    private Expression Unary()
     {
         if (Match(TokenType.BANG, TokenType.MINUS))
         {
             Token opp = Previous();
-            Expr right = Unary();
-            return new Expr.Prefix(opp, right);
+            Expression right = Unary();
+            return new Expression.Prefix(opp, right);
         }
 
         return Postfix();
     }
 
-    private Statement VarDeclaration()
+    private Statement.Var VarDeclaration()
     {
         Token name = Consume(TokenType.IDENTIFIER, "Expect variable name.");
 
-        Expr initializer = null;
+        Expression? initializer = null;
         if (Match(TokenType.EQUAL))
         {
             initializer = Expression();
@@ -582,10 +573,10 @@ public class Parser
         return new Statement.Var(name, initializer);
     }
 
-    private Statement WhileStatement()
+    private Statement.While WhileStatement()
     {
         Consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.");
-        Expr condition = Expression();
+        Expression condition = Expression();
         Consume(TokenType.RIGHT_PAREN, "Expect ')' after condition.");
 
         Statement body = Statement();

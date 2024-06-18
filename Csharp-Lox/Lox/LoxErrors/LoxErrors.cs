@@ -1,31 +1,31 @@
 ﻿namespace Lox;
 
-public abstract class LoxError : Exception
+public abstract class LoxErrorException : Exception
 {
-    protected LoxError() : base()
+    protected LoxErrorException() : base()
     {
     }
 
-    protected LoxError(string message) : base(message)
+    protected LoxErrorException(string message) : base(message)
     {
     }
 
-    protected LoxError(string message, Exception innerException) : base(message, innerException)
+    protected LoxErrorException(string message, Exception innerException) : base(message, innerException)
     {
     }
 }
 
-public class ParseError : LoxError
+public class ParseErrorException : LoxErrorException
 {
-    public ParseError(string message) : base(message)
+    public ParseErrorException(string message) : base(message)
     {
     }
 
-    public ParseError(string message, Exception innerException) : base(message, innerException)
+    public ParseErrorException(string message, Exception innerException) : base(message, innerException)
     {
     }
 
-    public ParseError() : base()
+    public ParseErrorException() : base()
     {
     }
 }

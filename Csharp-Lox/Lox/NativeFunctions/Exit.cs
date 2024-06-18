@@ -2,7 +2,7 @@
 
 internal class Exit : ICallable
 {
-    public int Arity { get => 0; set => throw new NotImplementedException(); }
+    public int Arity { get; }
 
     public object? Call(Interpreter interpreter, IList<object?> arguments)
     {

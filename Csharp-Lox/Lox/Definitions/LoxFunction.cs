@@ -18,14 +18,14 @@ internal class LoxFunction(Statement.Function declaration, Environment closure, 
 
         for (int i = 0; i < declaration.Parameters.Count; i++)
         {
-            environment.Define(declaration.Parameters[i].lexeme, arguments[i]);
+            environment.Define(declaration.Parameters[i].Lexeme, arguments[i]);
         }
 
         try
         {
             interpreter.ExecuteBlock(declaration.Body, environment);
         }
-        catch (Return returnValue)
+        catch (ReturnException returnValue)
         {
             if (isInitializer) return closure.GetAt(0, "this");
 
@@ -39,6 +39,6 @@ internal class LoxFunction(Statement.Function declaration, Environment closure, 
 
     public override string ToString()
     {
-        return "<fn " + declaration.Name.lexeme + ">";
+        return "<fn " + declaration.Name.Lexeme + ">";
     }
 }

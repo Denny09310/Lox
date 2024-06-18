@@ -6,22 +6,22 @@ internal class LoxInstance(LoxClass @class)
 
     public object? Get(Token name)
     {
-        if (_fields.TryGetValue(name.lexeme, out object? value))
+        if (_fields.TryGetValue(name.Lexeme, out object? value))
         {
             return value;
         }
 
-        LoxFunction? method = @class.FindMethod(name.lexeme);
+        LoxFunction? method = @class.FindMethod(name.Lexeme);
         if (method != null) return method.Bind(this);
 
-        throw new RuntimeError(name, "Undefined property '" + name.lexeme + "'.");
+        throw new RuntimeException(name, "Undefined property '" + name.Lexeme + "'.");
     }
 
     public void Set(Token name, object? value)
     {
-        if (!_fields.TryAdd(name.lexeme, value))
+        if (!_fields.TryAdd(name.Lexeme, value))
         {
-            _fields[name.lexeme] = value;
+            _fields[name.Lexeme] = value;
         }
     }
 

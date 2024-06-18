@@ -8,11 +8,9 @@
 <#@ import namespace="System.Linq" #>
 <#@ import namespace="System.Collections" #>
 <#@ import namespace="System.Collections.Generic" #> 
-using System.Collections.Generic;
 <#
-	string BASE_TYPE = "Expr";
+	string BASE_TYPE = "Expression";
 	string TOKEN_TYPE = "Token";
-	string OBJECT_TYPE = "object";
 	string INDENT = "    ";
 
 	var expressions = new [] {
@@ -21,7 +19,7 @@ using System.Collections.Generic;
 		new Exp("Call",     [new Arg(BASE_TYPE, "Callee"),        new Arg(TOKEN_TYPE, "Paren"),     new Arg("List<" + BASE_TYPE + ">", "Arguments")]),
 		new Exp("Get",      [new Arg(BASE_TYPE, "Target"),        new Arg(TOKEN_TYPE, "Name")]),
 		new Exp("Grouping", [new Arg(BASE_TYPE, "Expression")]),   
-		new Exp("Literal",  [new Arg(OBJECT_TYPE, "Value")]),	     
+		new Exp("Literal",  [new Arg("object?", "Value")]),	     
 		new Exp("Logical",  [new Arg(BASE_TYPE, "Left"),          new Arg(TOKEN_TYPE, "Opp"), new Arg(BASE_TYPE, "Right")]),
 		new Exp("Set",      [new Arg(BASE_TYPE, "Target"),        new Arg(TOKEN_TYPE, "Name"),     new Arg(BASE_TYPE, "Value")]),
 		new Exp("Super",    [new Arg(TOKEN_TYPE, "Keyword"),      new Arg(TOKEN_TYPE, "Method")]),
@@ -39,7 +37,7 @@ namespace Lox;
 
 public abstract class <#= BASE_TYPE #>
 {
-    public interface IVisitor<T> 
+    public interface IVisitor<out T> 
     {
 <#		
 	PushIndent(INDENT);
@@ -49,7 +47,7 @@ public abstract class <#= BASE_TYPE #>
 		PushIndent(INDENT);
 		Write("T Visit(");
 		Write(current.Name);
-        Write(" _" + current.Name.ToLower());
+        Write(" expression");
 		WriteLine(");");
 		PopIndent();
 	}

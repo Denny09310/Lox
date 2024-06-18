@@ -1,6 +1,6 @@
 ﻿namespace Lox;
 
-internal class Scanner
+internal class Scanner(string source)
 {
     private readonly Dictionary<string, TokenType> keywords = new()
     {
@@ -22,17 +22,11 @@ internal class Scanner
         { "while", TokenType.WHILE }
     };
 
-    private readonly string source;
-    private readonly List<Token> tokens = [];
+    private readonly List<Token> _tokens = [];
 
-    private int current = 0;
-    private int line = 1;
-    private int start = 0;
-
-    public Scanner(string source)
-    {
-        this.source = source;
-    }
+    private int _current = 0;
+    private int _line = 1;
+    private int _start = 0;
 
     /// <summary>
     /// Scans and parses the tokens.
@@ -42,12 +36,12 @@ internal class Scanner
     {
         while (!IsAtEnd())
         {
-            start = current;
+            _start = _current;
             ScanToken();
         }
 
-        tokens.Add(new Token(TokenType.EOF, "", null, line));
-        return tokens;
+        _tokens.Add(new Token(TokenType.EOF, "", null, _line));
+        return _tokens;
     }
 
     /// <summary>
@@ -64,10 +58,10 @@ internal class Scanner
     /// </summary>
     /// <param name="type">The token type.</param>
     /// <param name="literal">The token literal.</param>
-    private void AddToken(TokenType type, object literal)
+    private void AddToken(TokenType type, object? literal)
     {
-        string text = source[start..current];
-        tokens.Add(new Token(type, text, literal, line));
+        string text = source[_start.._current];
+        _tokens.Add(new Token(type, text, literal, _line));
     }
 
     /// <summary>
@@ -76,8 +70,8 @@ internal class Scanner
     /// <returns>Character consumed</returns>
     private char Advance()
     {
-        current++;
-        return source[current - 1];
+        _current++;
+        return source[_current - 1];
     }
 
     /// <summary>
@@ -87,7 +81,7 @@ internal class Scanner
     {
         while (IsAlphaNumeric(Peek())) Advance();
 
-        string text = source[start..current];
+        string text = source[_start.._current];
 
         if (!keywords.TryGetValue(text, out TokenType type))
         {
@@ -118,7 +112,7 @@ internal class Scanner
     /// <returns>
     ///   <c>true</c> if the specified char is alpha numeric; otherwise, <c>false</c>.
     /// </returns>
-    private bool IsAlphaNumeric(char c)
+    private static bool IsAlphaNumeric(char c)
     {
         return IsAlpha(c) || IsDigit(c);
     }
@@ -131,7 +125,7 @@ internal class Scanner
     /// </returns>
     private bool IsAtEnd()
     {
-        return current >= source.Length;
+        return _current >= source.Length;
     }
 
     /// <summary>
@@ -153,21 +147,21 @@ internal class Scanner
     {
         while (Peek() != '"' && !IsAtEnd())
         {
-            if (Peek() == '\n') line++;
+            if (Peek() == '\n') _line++;
             Advance();
         }
 
         //Unterminated string
         if (IsAtEnd())
         {
-            Lox.Error(line, "Unterminated string.");
+            Lox.Error(_line, "Unterminated string.");
             return;
         }
 
         //consume closing "
         Advance();
 
-        string value = source.Substring(start + 1, current - start - 2);
+        string value = source.Substring(_start + 1, _current - _start - 2);
         AddToken(TokenType.STRING, value);
     }
 
@@ -179,9 +173,9 @@ internal class Scanner
     private bool Match(char expected)
     {
         if (IsAtEnd()) return false;
-        if (source[current] != expected) return false;
+        if (source[_current] != expected) return false;
 
-        current++;
+        _current++;
         return true;
     }
 
@@ -201,7 +195,7 @@ internal class Scanner
             while (IsDigit(Peek())) Advance();
         }
 
-        AddToken(TokenType.NUMBER, double.Parse(source[start..current]));
+        AddToken(TokenType.NUMBER, double.Parse(source[_start.._current]));
     }
 
     /// <summary>
@@ -211,7 +205,7 @@ internal class Scanner
     private char Peek()
     {
         if (IsAtEnd()) return '\0';
-        return source[current];
+        return source[_current];
     }
 
     /// <summary>
@@ -220,8 +214,8 @@ internal class Scanner
     /// <returns></returns>
     private char PeekNext()
     {
-        if (current + 1 >= source.Length) return '\0';
-        return source[current + 1];
+        if (_current + 1 >= source.Length) return '\0';
+        return source[_current + 1];
     }
 
     /// <summary>
@@ -242,8 +236,6 @@ internal class Scanner
             case '+': AddToken(Match('+') ? TokenType.PLUS_PLUS : TokenType.PLUS); break;
             case ';': AddToken(TokenType.SEMICOLON); break;
             case '*': AddToken(TokenType.STAR); break;
-            //case '?': AddToken(TokenType.QUESTION_MARK); break;
-            //case ':': AddToken(TokenType.COLON); break;
 
             case '!': AddToken(Match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
             case '=': AddToken(Match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
@@ -268,7 +260,7 @@ internal class Scanner
                 break;
 
             case '\n':
-                line++;
+                _line++;
                 break;
 
             case '"': Lox_string(); break;
@@ -284,7 +276,7 @@ internal class Scanner
                 }
                 else
                 {
-                    Lox.Error(line, "Unexpected character.");
+                    Lox.Error(_line, "Unexpected character.");
                 }
 
                 break;

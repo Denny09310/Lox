@@ -2,90 +2,90 @@
 
 namespace Lox;
 
-public class AstPrinter : Expr.IVisitor<string?>
+public class AstPrinter : Expression.IVisitor<string?>
 {
-    public string? Print(Expr expr)
+    public string? Print(Expression expr)
     {
         return expr.Accept(this);
     }
 
-    public string? Visit(Expr.Assign _assign)
+    public string? Visit(Expression.Assign expression)
     {
         throw new NotImplementedException();
     }
 
-    public string? Visit(Expr.Binary _binary)
+    public string? Visit(Expression.Binary expression)
     {
-        return Parenthesize(_binary.Opp.lexeme, _binary.Left, _binary.Right);
+        return Parenthesize(expression.Opp.Lexeme, expression.Left, expression.Right);
     }
 
-    public string? Visit(Expr.Call _call)
-    {
-        throw new NotImplementedException();
-    }
-
-    public string? Visit(Expr.Get _get)
+    public string? Visit(Expression.Call expression)
     {
         throw new NotImplementedException();
     }
 
-    public string? Visit(Expr.Grouping _grouping)
-    {
-        return Parenthesize("group", _grouping.Expression);
-    }
-
-    public string? Visit(Expr.Literal _literal)
-    {
-        if (_literal.Value == null) return "nil";
-        return _literal.Value.ToString();
-    }
-
-    public string? Visit(Expr.Logical _logical)
+    public string? Visit(Expression.Get expression)
     {
         throw new NotImplementedException();
     }
 
-    public string? Visit(Expr.Set _set)
+    public string? Visit(Expression.Grouping expression)
+    {
+        return Parenthesize("group", expression.Expression);
+    }
+
+    public string? Visit(Expression.Literal expression)
+    {
+        if (expression.Value == null) return "nil";
+        return expression.Value.ToString();
+    }
+
+    public string? Visit(Expression.Logical expression)
     {
         throw new NotImplementedException();
     }
 
-    public string? Visit(Expr.Super _super)
+    public string? Visit(Expression.Set expression)
     {
         throw new NotImplementedException();
     }
 
-    public string? Visit(Expr.This _this)
+    public string? Visit(Expression.Super expression)
     {
         throw new NotImplementedException();
     }
 
-    public string? Visit(Expr.Prefix _prefix)
-    {
-        return Parenthesize(_prefix.Opp.lexeme, _prefix.Right);
-    }
-
-    public string? Visit(Expr.Postfix _postfix)
-    {
-        return Parenthesize(_postfix.Opp.lexeme);
-    }
-
-    public string? Visit(Expr.Conditional _conditional)
+    public string? Visit(Expression.This expression)
     {
         throw new NotImplementedException();
     }
 
-    public string? Visit(Expr.Variable _variable)
+    public string? Visit(Expression.Prefix expression)
+    {
+        return Parenthesize(expression.Opp.Lexeme, expression.Right);
+    }
+
+    public string? Visit(Expression.Postfix expression)
+    {
+        return Parenthesize(expression.Opp.Lexeme);
+    }
+
+    public string? Visit(Expression.Conditional expression)
     {
         throw new NotImplementedException();
     }
 
-    private string Parenthesize(string name, params Expr[] exprs)
+    public string? Visit(Expression.Variable expression)
+    {
+        throw new NotImplementedException();
+    }
+
+    private string Parenthesize(string name, params Expression[] exprs)
     {
         StringBuilder builder = new();
 
         builder.Append('(').Append(name);
-        foreach (Expr expr in exprs)
+        foreach (Expression expr in exprs)
         {
             builder.Append(' ');
             builder.Append(expr.Accept(this));

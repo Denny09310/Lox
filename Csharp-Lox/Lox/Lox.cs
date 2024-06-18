@@ -4,8 +4,8 @@ public static class Lox
 {
     private static readonly Interpreter interpreter = new();
 
-    private static bool hadError = false;
-    private static bool hadRuntimeError = false;
+    private static bool _hadError = false;
+    private static bool _hadRuntimeError = false;
 
     public static void Error(int line, string message)
     {
@@ -14,13 +14,13 @@ public static class Lox
 
     public static void Error(Token token, string message)
     {
-        if (token.type == TokenType.EOF)
+        if (token.Type == TokenType.EOF)
         {
-            Report(token.line, " at end", message);
+            Report(token.Line, " at end", message);
         }
         else
         {
-            Report(token.line, " at '" + token.lexeme + "'", message);
+            Report(token.Line, " at '" + token.Lexeme + "'", message);
         }
     }
 
@@ -31,38 +31,40 @@ public static class Lox
 
     public static int RunFile(string path)
     {
-        StreamReader sr = new(path);
+        using StreamReader sr = new(path);
 
         Run(sr.ReadToEnd());
 
-        if (hadError) return 65;
-        if (hadRuntimeError) return 70;
+        if (_hadError) return 65;
+        if (_hadRuntimeError) return 70;
 
         return 0;
     }
 
     public static void RunPrompt()
     {
+        const string ExitCommand = "exit";
         while (true)
         {
             Console.Write("> ");
             var source = Console.ReadLine();
             if (source == null) continue;
+            if (source == ExitCommand) break;
             Run(source);
-            hadError = false;
+            _hadError = false;
         }
     }
 
-    public static void RuntimeError(RuntimeError runtimeError)
+    public static void RuntimeError(RuntimeException runtimeError)
     {
-        Console.Error.WriteLine(runtimeError.Message + "\n[line " + runtimeError.Token?.line + "]");
-        hadRuntimeError = true;
+        Console.Error.WriteLine(runtimeError.Message + "\n[line " + runtimeError.Token?.Line + "]");
+        _hadRuntimeError = true;
     }
 
     private static void Report(int line, string where, string message)
     {
         Console.Error.WriteLine("[line " + line.ToString() + "] Error" + where + ": " + message);
-        hadError = true;
+        _hadError = true;
     }
 
     private static void Run(string source)
@@ -73,13 +75,13 @@ public static class Lox
         List<Statement> statements = parser.Parse();
 
         //stop if there was a syntax error.
-        if (hadError) return;
+        if (_hadError) return;
 
         Resolver resolver = new(interpreter);
         resolver.Resolve(statements);
 
         //stop if there was a resolution error.
-        if (hadError) return;
+        if (_hadError) return;
 
         interpreter.Interpret(statements);
     }

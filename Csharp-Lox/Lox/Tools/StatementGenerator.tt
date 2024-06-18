@@ -2,7 +2,7 @@
 <#@ output extension=".cs" #>
 <#
 	string BASE_TYPE = "Statement";
-    string EXPRESSION = "Expr";
+    string EXPRESSION = "Expression";
     string TOKEN_TYPE = "Token";
     string TOKEN_LIST = "IList<Token>";
     string STMT_LIST = "IList<Statement>";
@@ -11,13 +11,13 @@
     var expressions = new [] 
     {
         new Exp("Block", [new Arg(STMT_LIST, "Statements")]),
-        new Exp("Class", [new Arg(TOKEN_TYPE, "Name"), new Arg("Expr.Variable?", "Superclass"), new Arg("IEnumerable<Statement.Function>", "Methods")]),
-        new Exp("Expression", [new Arg(EXPRESSION, "Body")]),
+        new Exp("Class", [new Arg(TOKEN_TYPE, "Name"), new Arg("Expression.Variable?", "Superclass"), new Arg("IEnumerable<Statement.Function>", "Methods")]),
+        new Exp("Inline", [new Arg(EXPRESSION, "Body")]),
         new Exp("Function", [new Arg(TOKEN_TYPE, "Name"), new Arg(TOKEN_LIST, "Parameters"), new Arg(STMT_LIST, "Body")]),
-        new Exp("If", [new Arg(EXPRESSION, "Condition"), new Arg(BASE_TYPE, "ThenBranch"), new Arg(BASE_TYPE, "ElseBranch")]),
+        new Exp("If", [new Arg(EXPRESSION, "Condition"), new Arg(BASE_TYPE, "ThenBranch"), new Arg("Statement?", "ElseBranch")]),
         new Exp("Print", [new Arg(EXPRESSION, "Body")]),
-        new Exp("Return", [new Arg(TOKEN_TYPE, "Keyword"), new Arg(EXPRESSION, "Value")]),
-        new Exp("Var", [new Arg(TOKEN_TYPE, "Name"), new Arg(EXPRESSION, "Initializer")]),
+        new Exp("Return", [new Arg(TOKEN_TYPE, "Keyword"), new Arg("Expression?", "Value")]),
+        new Exp("Var", [new Arg(TOKEN_TYPE, "Name"), new Arg("Expression?", "Initializer")]),
         new Exp("While", [new Arg(EXPRESSION, "Condition"), new Arg(BASE_TYPE, "Body")])
     };
 #>
@@ -26,7 +26,7 @@ namespace Lox;
 
 public abstract class <#= BASE_TYPE #>
 {
-    public interface IVisitor<T> 
+    public interface IVisitor<out T> 
     {
 <#		
 	PushIndent(INDENT);
@@ -36,7 +36,7 @@ public abstract class <#= BASE_TYPE #>
 		PushIndent(INDENT);
 		Write("T Visit(");
 		Write(current.Name);
-        Write(" _" + current.Name.ToLower());
+        Write(" statement");
 		WriteLine(");");
 		PopIndent();
 	}

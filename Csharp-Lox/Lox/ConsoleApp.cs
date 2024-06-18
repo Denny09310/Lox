@@ -1,10 +1,8 @@
 ﻿namespace Lox;
 
-class ConsoleApp
+internal static class ConsoleApp
 {
-
-
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
         if (args.Length > 1)
         {

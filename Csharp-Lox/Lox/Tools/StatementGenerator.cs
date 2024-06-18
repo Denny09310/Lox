@@ -1,23 +1,19 @@
 ﻿
-
-
-
 namespace Lox;
 
 public abstract class Statement
 {
-    public interface IVisitor<T> 
+    public interface IVisitor<out T> 
     {
-T Visit(Block _block);
-        T Visit(Class _class);
-        T Visit(Expression _expression);
-        T Visit(Function _function);
-        T Visit(If _if);
-        T Visit(Print _print);
-        T Visit(Return _return);
-        T Visit(Var _var);
-        T Visit(While _while);
-
+        T Visit(Block statement);
+        T Visit(Class statement);
+        T Visit(Inline statement);
+        T Visit(Function statement);
+        T Visit(If statement);
+        T Visit(Print statement);
+        T Visit(Return statement);
+        T Visit(Var statement);
+        T Visit(While statement);
     }
 
 	
@@ -26,7 +22,7 @@ T Visit(Block _block);
     /// </summary> 
     public abstract T Accept<T>(IVisitor<T> visitor);
 
-public sealed class Block(IList<Statement> statements) : Statement
+    public sealed class Block(IList<Statement> statements) : Statement
     {
         public IList<Statement> Statements{ get; } = statements;
          
@@ -35,10 +31,10 @@ public sealed class Block(IList<Statement> statements) : Statement
             return visitor.Visit(this);
         }
     }
-    public sealed class Class(Token name, Expr.Variable? superclass, IEnumerable<Statement.Function> methods) : Statement
+    public sealed class Class(Token name, Expression.Variable? superclass, IEnumerable<Statement.Function> methods) : Statement
     {
         public Token Name{ get; } = name;
-        public Expr.Variable? Superclass{ get; } = superclass;
+        public Expression.Variable? Superclass{ get; } = superclass;
         public IEnumerable<Statement.Function> Methods{ get; } = methods;
          
         public override T Accept<T>(IVisitor<T> visitor)
@@ -46,9 +42,9 @@ public sealed class Block(IList<Statement> statements) : Statement
             return visitor.Visit(this);
         }
     }
-    public sealed class Expression(Expr body) : Statement
+    public sealed class Inline(Expression body) : Statement
     {
-        public Expr Body{ get; } = body;
+        public Expression Body{ get; } = body;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
@@ -66,49 +62,49 @@ public sealed class Block(IList<Statement> statements) : Statement
             return visitor.Visit(this);
         }
     }
-    public sealed class If(Expr condition, Statement thenbranch, Statement elsebranch) : Statement
+    public sealed class If(Expression condition, Statement thenbranch, Statement? elsebranch) : Statement
     {
-        public Expr Condition{ get; } = condition;
+        public Expression Condition{ get; } = condition;
         public Statement ThenBranch{ get; } = thenbranch;
-        public Statement ElseBranch{ get; } = elsebranch;
+        public Statement? ElseBranch{ get; } = elsebranch;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Print(Expr body) : Statement
+    public sealed class Print(Expression body) : Statement
     {
-        public Expr Body{ get; } = body;
+        public Expression Body{ get; } = body;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Return(Token keyword, Expr value) : Statement
+    public sealed class Return(Token keyword, Expression? value) : Statement
     {
         public Token Keyword{ get; } = keyword;
-        public Expr Value{ get; } = value;
+        public Expression? Value{ get; } = value;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class Var(Token name, Expr initializer) : Statement
+    public sealed class Var(Token name, Expression? initializer) : Statement
     {
         public Token Name{ get; } = name;
-        public Expr Initializer{ get; } = initializer;
+        public Expression? Initializer{ get; } = initializer;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {
             return visitor.Visit(this);
         }
     }
-    public sealed class While(Expr condition, Statement body) : Statement
+    public sealed class While(Expression condition, Statement body) : Statement
     {
-        public Expr Condition{ get; } = condition;
+        public Expression Condition{ get; } = condition;
         public Statement Body{ get; } = body;
          
         public override T Accept<T>(IVisitor<T> visitor)
@@ -116,6 +112,5 @@ public sealed class Block(IList<Statement> statements) : Statement
             return visitor.Visit(this);
         }
     }
-
 }
 
