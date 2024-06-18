@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Lox;
 
-namespace Lox
+internal interface ICallable
 {
-    interface ICallable
-    {
-        public int Arity { get; }
-        object Call(Interpreter interpreter, List<object> arguments);
-    }
+    public int Arity { get; }
+
+    object? Call(Interpreter interpreter, IList<object?> arguments);
 }

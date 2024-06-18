@@ -1,463 +1,468 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
-namespace Lox
+namespace Lox;
+
+internal class Interpreter : Expr.IVisitor<object?>, Statement.IVisitor<object?>
 {
-    class Interpreter : Expr.IVisitor<object>, Stmt.IVisitor<object>
+    private readonly Dictionary<Expr, int> _locals = [];
+    private Environment _environment;
+
+    public Interpreter()
     {
-        private Environment _environment;
-        private readonly Dictionary<Expr, int> _locals = new Dictionary<Expr, int>();
+        Globals = new Environment();
+        _environment = Globals;
+        DefineNativeFunctions();
+    }
 
-        public Environment Globals { get; }
+    public Environment Globals { get; }
 
-        public Interpreter()
+    public void ExecuteBlock(IEnumerable<Statement> statements, Environment environment)
+    {
+        Environment previous = _environment;
+
+        try
         {
-            Globals = new Environment();
-            _environment = Globals;
-            DefineNativeFunctions();
-        }
+            _environment = environment;
 
-        private void DefineNativeFunctions()
-        {
-            Globals.Define("clock", new NativeFunctions.Clock());
-            Globals.Define("exit", new NativeFunctions.Exit());
-        }
-
-
-        public void Interpret(List<Stmt> statements)
-        {
-            try
+            foreach (Statement statement in statements)
             {
-                foreach (Stmt statement in statements)
-                {
-                    Execute(statement);
-                }
-            } catch (RuntimeError err)
-            {
-                Lox.RuntimeError(err);
+                Execute(statement);
             }
         }
-
-        public void Resolve(Expr expr, int depth)
+        finally
         {
-            _locals.Add(expr, depth);
+            _environment = previous;
+        }
+    }
+
+    public void Interpret(List<Statement> statements)
+    {
+        try
+        {
+            foreach (Statement statement in statements)
+            {
+                Execute(statement);
+            }
+        }
+        catch (RuntimeError err)
+        {
+            Lox.RuntimeError(err);
+        }
+    }
+
+    public void Resolve(Expr expr, int depth)
+    {
+        _locals.Add(expr, depth);
+    }
+
+    public object? Visit(Expr.Assign _assign)
+    {
+        object? value = Evaluate(_assign.Value);
+
+        if (_locals.TryGetValue(_assign, out int distance))
+        {
+            _environment.AssignAt(distance, _assign.Name, value);
+        }
+        else
+        {
+            Globals.Assign(_assign.Name, value);
         }
 
+        return value;
+    }
 
-        private void Execute(Stmt stmt)
+    public object? Visit(Expr.Binary binary)
+    {
+        object? left = Evaluate(binary.Left);
+        object? right = Evaluate(binary.Right);
+
+        switch (binary.Opp.type)
         {
-            stmt.Accept(this);
+            case TokenType.BANG_EQUAL:
+                CheckNumberOperand(binary.Opp, right);
+                return !IsEqual(left, right);
+
+            case TokenType.EQUAL_EQUAL:
+                CheckNumberOperand(binary.Opp, right);
+                return IsEqual(left, right);
+
+            case TokenType.GREATER:
+                CheckNumberOperands(binary.Opp, left, right);
+                return (double)left > (double)right;
+
+            case TokenType.GREATER_EQUAL:
+                CheckNumberOperands(binary.Opp, left, right);
+                return (double)left >= (double)right;
+
+            case TokenType.LESS:
+                CheckNumberOperands(binary.Opp, left, right);
+                return (double)left < (double)right;
+
+            case TokenType.LESS_EQUAL:
+                CheckNumberOperands(binary.Opp, left, right);
+                return (double)left <= (double)right;
+
+            case TokenType.MINUS:
+                CheckNumberOperands(binary.Opp, left, right);
+                return (double)left - (double)right;
+
+            case TokenType.PLUS:
+                if (left is double l1 && right is double r1) return l1 + r1;
+                if (left is string l2 && right is string r2) return l2 + r2;
+                if (left is string l3 && right is double r3) return l3 + r3.ToString();
+                throw new RuntimeError(binary.Opp, "Operands must be two numbers or two strings.");
+
+            case TokenType.SLASH:
+                CheckNumberOperands(binary.Opp, left, right);
+                if ((double)right == 0) throw new RuntimeError(binary.Opp, "Cannot divide by zero.");
+                return (double)left / (double)right;
+
+            case TokenType.STAR:
+                CheckNumberOperands(binary.Opp, left, right);
+                return (double)left * (double)right;
         }
 
+        throw new UnreachableException();
+    }
 
-        object Expr.IVisitor<object>.Visit(Expr.Assign _assign)
+    public object? Visit(Expr.Call call)
+    {
+        object? callee = Evaluate(call.Callee);
+
+        List<object?> arguments = [];
+        foreach (Expr argument in call.Arguments)
         {
-            object value = Evaluate(_assign.value);
-
-            if (_locals.TryGetValue(_assign, out int distance))
-            {
-                _environment.AssignAt(distance, _assign.name, value);
-            }
-            else
-            {
-                Globals.Assign(_assign.name, value);
-            }
-
-            return value;
+            arguments.Add(Evaluate(argument));
         }
 
-        object Expr.IVisitor<object>.Visit(Expr.Binary _binary)
+        if (callee is not ICallable function)
         {
-            object left = Evaluate(_binary.left);
-            object right = Evaluate(_binary.right);
+            throw new RuntimeError(call.Paren, "Can only call functions and classes.");
+        }
 
-            switch (_binary.opp.type)
-            {
-                case TokenType.BANG_EQUAL:
-                    CheckNumberOperand(_binary.opp, right);
-                    return !IsEqual(left, right);
+        if (arguments.Count != function.Arity)
+        {
+            throw new RuntimeError(call.Paren, "Expected " + function.Arity + " arguments, but got " + arguments.Count + ".");
+        }
 
-                case TokenType.EQUAL_EQUAL:
-                    CheckNumberOperand(_binary.opp, right);
-                    return IsEqual(left, right);
+        return function.Call(this, arguments);
+    }
 
-                case TokenType.GREATER:
-                    CheckNumberOperand(_binary.opp, right);
-                    return (double)left > (double)right;
+    public object? Visit(Expr.Get get)
+    {
+        object? target = Evaluate(get.Target);
+        if (target is LoxInstance instance)
+        {
+            return instance.Get(get.Name);
+        }
 
-                case TokenType.GREATER_EQUAL:
-                    CheckNumberOperand(_binary.opp, right);
-                    return (double)left >= (double)right;
+        throw new RuntimeError(get.Name, "Only instances have properties.");
+    }
 
-                case TokenType.LESS:
-                    CheckNumberOperand(_binary.opp, right);
-                    return (double)left < (double)right;
+    public object? Visit(Expr.Grouping grouping)
+    {
+        return Evaluate(grouping.Expression);
+    }
 
-                case TokenType.LESS_EQUAL:
-                    CheckNumberOperand(_binary.opp, right);
-                    return (double)left <= (double)right;
+    public object? Visit(Expr.Literal literal)
+    {
+        return literal.Value;
+    }
 
-                case TokenType.MINUS:
-                    CheckNumberOperands(_binary.opp, left, right);
-                    return (double)left - (double)right;
+    public object? Visit(Expr.Logical logical)
+    {
+        object? left = Evaluate(logical.Left);
 
-                case TokenType.PLUS:
-                    if (left is double && right is double) return (double)left + (double)right;
-                    if (left is string && right is string) return (string)left + (string)right;
-                    if (left is string && right is double) return (string)left + ((double)right).ToString();
-                    throw new RuntimeError(_binary.opp, "Operands must be two numbers or two strings.");
+        if (logical.Opp.type == TokenType.OR)
+        {
+            if (IsTruthy(left)) return left;
+        }
+        else
+        {
+            if (!IsTruthy(left)) return left;
+        }
 
-                case TokenType.SLASH:
-                    CheckNumberOperand(_binary.opp, right);
-                    if ((double)right == 0) throw new RuntimeError(_binary.opp, "Cannot divide by zero.");
-                    return (double)left / (double)right;
+        return Evaluate(logical.Right);
+    }
 
-                case TokenType.STAR:
-                    CheckNumberOperand(_binary.opp, right);
-                    return (double)left * (double)right;
-            }
+    public object? Visit(Expr.Set set)
+    {
+        object? target = Evaluate(set.Target);
 
-            //unreachable
+        if (target is not LoxInstance instance)
+        {
+            throw new RuntimeError(set.Name, "Only instances have fields.");
+        }
+
+        object? value = Evaluate(set.Target);
+        instance.Set(set.Name, value);
+
+        return value;
+    }
+
+    public object? Visit(Expr.Super super)
+    {
+        int distance = _locals[super];
+
+        if (_environment.GetAt(distance, "super") is not LoxClass superclass)
+        {
+            throw new RuntimeError(super.Keyword, $"The class does not inherit {super.Method.lexeme}");
+        }
+
+        if (_environment.GetAt(distance, "super") is not LoxInstance instance)
+        {
+            throw new RuntimeError(super.Keyword, $"The class does not inherit {super.Method.lexeme}");
+        }
+
+        LoxFunction method = superclass.FindMethod(super.Method.lexeme)
+            ?? throw new RuntimeError(super.Method, "Undefined property '" + super.Method.lexeme + "'.");
+
+        return method.Bind(instance);
+    }
+
+    public object? Visit(Expr.This @this)
+    {
+        return LookUpVariable(@this.Keyword, @this);
+    }
+
+    public object? Visit(Expr.Prefix prefix)
+    {
+        object? right = Evaluate(prefix.Right);
+
+        switch (prefix.Opp.type)
+        {
+            case TokenType.MINUS:
+                CheckNumberOperand(prefix.Opp, right);
+                return -(double)right;
+
+            case TokenType.BANG:
+                return !IsTruthy(right);
+
+            default:
+                break;
+        }
+
+        throw new UnreachableException();
+    }
+
+    public object? Visit(Expr.Conditional conditional)
+    {
+        throw new NotImplementedException();
+    }
+
+    public object? Visit(Expr.Variable variable)
+    {
+        return LookUpVariable(variable.Name, variable);
+    }
+
+    public object? Visit(Statement.Expression expression)
+    {
+        Evaluate(expression.Body);
+
+        return null;
+    }
+
+    public object? Visit(Statement.Print print)
+    {
+        object? value = Evaluate(print.Body);
+        Console.WriteLine(Stringify(value));
+
+        return null;
+    }
+
+    public object? Visit(Statement.Var @var)
+    {
+        object? value = null;
+        if (@var.Initializer != null)
+        {
+            value = Evaluate(@var.Initializer);
+        }
+
+        _environment.Define(@var.Name.lexeme, value);
+        return null;
+    }
+
+    public object? Visit(Statement.Block block)
+    {
+        ExecuteBlock(block.Statements, new Environment(_environment));
+        return null;
+    }
+
+    public object? Visit(Statement.If @if)
+    {
+        if (IsTruthy(Evaluate(@if.Condition)))
+        {
+            Execute(@if.ThenBranch);
+        }
+        else if (@if.ElseBranch != null)
+        {
+            Execute(@if.ElseBranch);
+        }
+        return null;
+    }
+
+    public object? Visit(Statement.While @while)
+    {
+        while (IsTruthy(Evaluate(@while.Condition)))
+        {
+            Execute(@while.Body);
+        }
+
+        return null;
+    }
+
+    public object? Visit(Statement.Function function)
+    {
+        LoxFunction func = new(function, _environment, false);
+        _environment.Define(function.Name.lexeme, func);
+
+        return null;
+    }
+
+    public object? Visit(Statement.Return @return)
+    {
+        object? value = null;
+
+        if (@return.Value != null) value = Evaluate(@return.Value);
+
+        throw new Return(value);
+    }
+
+    public object? Visit(Statement.Class @class)
+    {
+        if (@class.Superclass == null)
+        {
             return null;
         }
 
-        object Expr.IVisitor<object>.Visit(Expr.Call _call)
+        object? superclass = Evaluate(@class.Superclass);
+        if (superclass is not LoxClass superklass)
         {
-            object callee = Evaluate(_call.callee);
-
-            List<object> arguments = new List<object>();
-            foreach (Expr argument in _call.arguments)
-            {
-                arguments.Add(Evaluate(argument));
-            }
-
-            if (!(callee is ICallable))
-            {
-                throw new RuntimeError(_call.paren, "Can only call functions and classes.");
-            }
-
-            ICallable function = (ICallable)callee;
-            if (arguments.Count != function.Arity)
-            {
-                throw new RuntimeError(_call.paren, "Expected " + function.Arity + " arguments, but got " + arguments.Count + ".");
-            }
-
-
-
-            return function.Call(this, arguments);
+            throw new RuntimeError(@class.Superclass.Name, "Superclass must be a class.");
         }
 
-         object Expr.IVisitor<object>.Visit(Expr.Get _get)
-        {
-            object target = Evaluate(_get.target);
-            if (target is LoxInstance)
-            {
-                return ((LoxInstance)target).Get(_get.name);
-            }
+        _environment.Define(@class.Name.lexeme, null);
 
-            throw new RuntimeError(_get.name, "Only instances have properties.");
+        if (@class.Superclass != null)
+        {
+            _environment = new Environment(_environment);
+            _environment.Define("super", superclass);
         }
 
-         object Expr.IVisitor<object>.Visit(Expr.Grouping _grouping)
+        Dictionary<string, LoxFunction> methods = [];
+        foreach (Statement.Function method in @class.Methods)
         {
-            return Evaluate(_grouping.expression);
+            LoxFunction function = new(method, _environment, method.Name.lexeme.Equals("init"));
+            methods.Add(method.Name.lexeme, function);
         }
 
-         object Expr.IVisitor<object>.Visit(Expr.Literal _literal)
+        LoxClass klass = new(@class.Name.lexeme, superklass, methods);
+
+        if (_environment.Enclosing is null)
         {
-            return _literal.value;
-        }
-
-         object Expr.IVisitor<object>.Visit(Expr.Logical _logical)
-        {
-            object left = Evaluate(_logical.left);
-
-            if (_logical.opp.type == TokenType.OR)
-            {
-                if (IsTruthy(left)) return left;
-            } else
-            {
-                if (!IsTruthy(left)) return left;
-            }
-
-            return Evaluate(_logical.right);
-        }
-
-         object Expr.IVisitor<object>.Visit(Expr.Set _set)
-        {
-            object target = Evaluate(_set.target);
-
-            if (!(target is LoxInstance))
-            {
-                throw new RuntimeError(_set.name, "Only instances have fields.");
-            }
-
-            object value = Evaluate(_set.value);
-            ((LoxInstance)target).Set(_set.name, value);
-
-            return value;
-        }
-
-         object Expr.IVisitor<object>.Visit(Expr.Super _super)
-        {
-            int distance = _locals[_super];
-            LoxClass superclass = (LoxClass)_environment.GetAt(distance, "super");
-
-            // "this" is always one level nearer than "super"'s environment.
-            LoxInstance _object = (LoxInstance)_environment.GetAt(distance - 1, "this");
-
-            LoxFunction method = superclass.FindMethod(_super.method.lexeme);
-
-            if (method == null)
-            {
-                throw new RuntimeError(_super.method, "Undefined property '" + _super.method.lexeme + "'.");
-            }
-
-            return method.Bind(_object);
-        }
-
-         object Expr.IVisitor<object>.Visit(Expr.This _this)
-        {
-            return LookUpVariable(_this.keyword, _this);
-        }
-
-         object Expr.IVisitor<object>.Visit(Expr.Prefix _prefix)
-        {
-            object right = Evaluate(_prefix.right);
-
-            switch (_prefix.opp.type)
-            {
-                case TokenType.MINUS:
-                    CheckNumberOperand(_prefix.opp, right);
-                    return -(double)right;
-                case TokenType.BANG:
-                    return !IsTruthy(right);
-                default:
-                    break;
-            }
-
-            //unreachable
             return null;
         }
 
-         object Expr.IVisitor<object>.Visit(Expr.Postfix _postfix)
+        if (superclass != null) _environment = _environment.Enclosing;
+
+        _environment.Assign(@class.Name, klass);
+
+        return null;
+    }
+
+    public object? Visit(Expr.Postfix _postfix)
+    {
+        object? left = Evaluate(_postfix.Left);
+
+        CheckNumberOperand(_postfix.Opp, left);
+
+        switch (_postfix.Opp.type)
         {
-            object left = Evaluate(_postfix.left);
+            case TokenType.PLUS_PLUS:
+                return (double)left + 1;
 
-            CheckNumberOperand(_postfix.opp, left);
+            case TokenType.MINUS_MINUS:
+                return (double)left - 1;
 
-            switch (_postfix.opp.type)
+            default:
+                break;
+        }
+
+        return null;
+    }
+
+    private static void CheckNumberOperand(Token opp, [NotNull] object? operand)
+    {
+        if (operand is double) return;
+
+        throw new RuntimeError(opp, "Operand must be a number.");
+    }
+
+    private static void CheckNumberOperands(Token opp, [NotNull] object? left, [NotNull] object? right)
+    {
+        if (left is double && right is double) return;
+
+        throw new RuntimeError(opp, "Operands must be numbers.");
+    }
+
+    private static bool IsEqual(object? a, object? b)
+    {
+        if (a == null && b == null) return true;
+        if (a == null) return false;
+
+        return a.Equals(b);
+    }
+
+    private static bool IsTruthy(object? obj)
+    {
+        if (obj == null) return false;
+        if (obj is bool @bool) return @bool;
+        return true;
+    }
+
+    private static string Stringify(object? obj)
+    {
+        if (obj == null) return "nil";
+
+        if (obj is double)
+        {
+            string? text = obj.ToString();
+            if (!string.IsNullOrEmpty(text) && text.EndsWith(".0"))
             {
-                case TokenType.PLUS_PLUS:
-                    return (double)left + 1;
-                case TokenType.MINUS_MINUS:
-                    return (double)left - 1;
-                default:
-                    break;
+                text = text[0..(text.Length - 2)];
             }
-
-            return null;
+            return text ?? string.Empty;
         }
 
-         object Expr.IVisitor<object>.Visit(Expr.Conditional _conditional)
+        return obj.ToString() ?? string.Empty;
+    }
+
+    private void DefineNativeFunctions()
+    {
+        Globals.Define("clock", new NativeFunctions.Clock());
+        Globals.Define("exit", new NativeFunctions.Exit());
+    }
+
+    private object? Evaluate(Expr expr)
+    {
+        return expr.Accept(this);
+    }
+
+    private void Execute(Statement stmt)
+    {
+        stmt.Accept(this);
+    }
+
+    private object? LookUpVariable(Token name, Expr expr)
+    {
+        if (_locals.TryGetValue(expr, out int distance))
         {
-            throw new NotImplementedException();
+            return _environment.GetAt(distance, name.lexeme);
         }
-
-         object Expr.IVisitor<object>.Visit(Expr.Variable _variable)
+        else
         {
-            return LookUpVariable(_variable.name, _variable);
-        }
-
-        private object LookUpVariable(Token name, Expr expr)
-        {
-            if (_locals.TryGetValue(expr, out int distance))
-            {
-                return _environment.GetAt(distance, name.lexeme);
-            }
-            else
-            {
-                return Globals.Get(name);
-            }
-        }
-
-        private object Evaluate(Expr expr)
-        {
-            return expr.Accept(this);
-        }
-
-        private bool IsTruthy(object obj)
-        {
-            if (obj == null) return false;
-            if (obj is bool) return (bool)obj;
-            return true;
-        }
-
-        private bool IsEqual(object a, object b)
-        {
-            if (a == null && b == null) return true;
-            if (a == null) return false;
-
-            return a.Equals(b);
-        }
-
-        private string Stringify(object obj)
-        {
-            if (obj == null) return "nil";
-
-            if (obj is double)
-            {
-                string text = obj.ToString();
-                if (text.EndsWith(".0"))
-                {
-                    text = text[0..(text.Length - 2)];
-                }
-                return text;
-            }
-
-            return obj.ToString();
-        }
-
-        private void CheckNumberOperand(Token opp, object operand)
-        {
-            if (operand is double) return;
-
-            throw new RuntimeError(opp, "Operand must be a number.");
-        }
-
-        private void CheckNumberOperands(Token opp, object left, object right)
-        {
-            if (left is double && right is double) return;
-
-            throw new RuntimeError(opp, "Operands must be numbers.");
-        }
-
-        object Stmt.IVisitor<object>.Visit(Stmt.Expression _expression)
-        {
-            Evaluate(_expression.expression);
-            
-            return null;
-        }
-
-        object Stmt.IVisitor<object>.Visit(Stmt.Print _print)
-        {
-            object value = Evaluate(_print.expression);
-            Console.WriteLine(Stringify(value));
-
-            return null;
-        }
-
-        object Stmt.IVisitor<object>.Visit(Stmt.Var _var)
-        {
-            object value = null;
-            if (_var.initializer != null)
-            {
-                value = Evaluate(_var.initializer);
-            }
-
-            _environment.Define(_var.name.lexeme, value);
-            return null;
-        }
-
-        object Stmt.IVisitor<object>.Visit(Stmt.Block _block)
-        {
-            ExecuteBlock(_block.statements, new Environment(_environment));
-            return null;
-        }
-
-        object Stmt.IVisitor<object>.Visit(Stmt.If _if)
-        {
-            if (IsTruthy(Evaluate(_if.condition)))
-            {
-                Execute(_if.thenBranch);
-            }
-            else if (_if.elseBranch != null)
-            {
-                Execute(_if.elseBranch);
-            }
-            return null;
-        }
-
-        public void ExecuteBlock(List<Stmt> statements, Environment environment)
-        {
-            Environment previous = this._environment;
-
-            try
-            {
-                _environment = environment;
-
-                foreach (Stmt statement in statements)
-                {
-                    Execute(statement);
-                }
-            } 
-            finally
-            {
-                _environment = previous;
-            }
-        }
-
-        object Stmt.IVisitor<object>.Visit(Stmt.While _while)
-        {
-            while (IsTruthy(Evaluate(_while.condition)))
-            {
-                Execute(_while.body);
-            }
-
-            return null;
-        }
-
-        object Stmt.IVisitor<object>.Visit(Stmt.Function _function)
-        {
-            LoxFunction function = new LoxFunction(_function, _environment, false);
-            _environment.Define(_function.name.lexeme, function);
-
-            return null;
-        }
-
-        object Stmt.IVisitor<object>.Visit(Stmt.Return _return)
-        {
-            object value = null;
-
-            if (_return.value != null) value = Evaluate(_return.value);
-
-            throw new Return(value);
-        }
-
-        object Stmt.IVisitor<object>.Visit(Stmt.Class _class)
-        {
-            object superclass = null;
-            if (_class.superclass != null)
-            {
-                superclass = Evaluate(_class.superclass);
-                if (!(superclass is LoxClass)) {
-                    throw new RuntimeError(_class.superclass.name, "Superclass must be a class.");
-                }
-            }
-
-            _environment.Define(_class.name.lexeme, null);
-
-            if (_class.superclass != null)
-            {
-                _environment = new Environment(_environment);
-                _environment.Define("super", superclass);
-            }
-
-            Dictionary<string, LoxFunction> methods = new Dictionary<string, LoxFunction>();
-            foreach (Stmt.Function method in _class.methods)
-            {
-                LoxFunction function = new LoxFunction(method, _environment, method.name.lexeme.Equals("init"));
-                methods.Add(method.name.lexeme, function);
-            }
-
-            LoxClass klass = new LoxClass(_class.name.lexeme, (LoxClass)superclass, methods);
-
-            if (superclass != null) _environment = _environment.enclosing;
-
-            _environment.Assign(_class.name, klass);
-
-            return null;
+            return Globals.Get(name);
         }
     }
 }

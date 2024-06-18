@@ -1,59 +1,45 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Lox;
 
-namespace Lox
+internal class LoxClass(string name, LoxClass superclass, Dictionary<string, LoxFunction> methods) : ICallable
 {
-    class LoxClass : ICallable
+    public int Arity
     {
-        private readonly Dictionary<string, LoxFunction> _methods;
-        
-        public LoxClass Superclass { get; }
-        public string Name { get; }
-        public int Arity { 
-            get {
-                LoxFunction initializer = FindMethod("init");
-                return (initializer == null) ? 0 : initializer.Arity;
-            }
-        }
-
-        public LoxClass(string name, LoxClass superclass, Dictionary<string, LoxFunction> methods)
+        get
         {
-            Name = name;
-            Superclass = superclass;
-            _methods = methods;
+            LoxFunction? initializer = FindMethod("init");
+            return (initializer == null) ? 0 : initializer.Arity;
         }
+    }
 
-        public LoxFunction FindMethod(string name)
+    public string Name { get; } = name;
+    public LoxClass Superclass { get; } = superclass;
+
+    public object? Call(Interpreter interpreter, IList<object?> arguments)
+    {
+        LoxInstance instance = new(this);
+        LoxFunction? initializer = FindMethod("init");
+        initializer?.Bind(instance).Call(interpreter, arguments);
+
+        return instance;
+    }
+
+    public LoxFunction? FindMethod(string name)
+    {
+        if (methods.TryGetValue(name, out LoxFunction? value))
         {
-            if (_methods.ContainsKey(name))
-            {
-                return _methods[name];
-            }
-
-            if (Superclass != null)
-            {
-                return Superclass.FindMethod(name);
-            }
-
-            return null;
+            return value;
         }
 
-        public object Call(Interpreter interpreter, List<object> arguments)
+        if (Superclass != null)
         {
-            LoxInstance instance = new LoxInstance(this);
-            LoxFunction initializer = FindMethod("init");
-            if (initializer != null)
-            {
-                initializer.Bind(instance).Call(interpreter, arguments);
-            }
-
-            return instance;
+            return Superclass.FindMethod(name);
         }
 
-        public override string ToString()
-        {
-            return Name;
-        }
+        return null;
+    }
+
+    public override string ToString()
+    {
+        return Name;
     }
 }

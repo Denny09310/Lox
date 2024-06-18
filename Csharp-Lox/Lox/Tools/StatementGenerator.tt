@@ -1,179 +1,122 @@
-﻿<#@ template  debug="true" hostSpecific="true" #>
+﻿<#@ template debug="true" hostSpecific="true" #>
 <#@ output extension=".cs" #>
-<#@ Assembly Name="System.Core" #>
-<#@ Assembly Name="System.Windows.Forms" #>
-<#@ import namespace="System" #>
-<#@ import namespace="System.IO" #>
-<#@ import namespace="System.Diagnostics" #>
-<#@ import namespace="System.Linq" #>
-<#@ import namespace="System.Collections" #>
-<#@ import namespace="System.Collections.Generic" #> 
-using System.Collections.Generic;
 <#
-	string BASE_TYPE = "Stmt";
-	string EXPRESSION = "Expr";
-	string TOKEN_TYPE = "Token";
-	string TOKEN_LIST = "List<Token>";
-	string STMT_LIST = "List<Stmt>";
-	string INDENT = "    ";
+	string BASE_TYPE = "Statement";
+    string EXPRESSION = "Expr";
+    string TOKEN_TYPE = "Token";
+    string TOKEN_LIST = "IList<Token>";
+    string STMT_LIST = "IList<Statement>";
+    string INDENT = "    ";
 
-	var expressions = new [] {
-		new Exp("Block", new Arg(STMT_LIST, "statements")),
-		new Exp("Class", new Arg(TOKEN_TYPE, "name"), new Arg("Expr.Variable", "superclass"), new Arg("List<Stmt.Function>", "methods")),
-		new Exp("Expression", new Arg(EXPRESSION, "expression")),
-		new Exp("Function", new Arg(TOKEN_TYPE, "name"), new Arg(TOKEN_LIST, "parameters"), new Arg(STMT_LIST, "body")),
-		new Exp("If", new Arg(EXPRESSION, "condition"), new Arg(BASE_TYPE, "thenBranch"), new Arg(BASE_TYPE, "elseBranch")),
-		new Exp("Print", new Arg(EXPRESSION, "expression")),
-		new Exp("Return", new Arg(TOKEN_TYPE, "keyword"), new Arg(EXPRESSION, "value")),
-		new Exp("Var", new Arg(TOKEN_TYPE, "name"), new Arg(EXPRESSION, "initializer")),
-		new Exp("While", new Arg(EXPRESSION, "condition"), new Arg(BASE_TYPE, "body"))
-		
-	};
-
+    var expressions = new [] 
+    {
+        new Exp("Block", [new Arg(STMT_LIST, "Statements")]),
+        new Exp("Class", [new Arg(TOKEN_TYPE, "Name"), new Arg("Expr.Variable?", "Superclass"), new Arg("IEnumerable<Statement.Function>", "Methods")]),
+        new Exp("Expression", [new Arg(EXPRESSION, "Body")]),
+        new Exp("Function", [new Arg(TOKEN_TYPE, "Name"), new Arg(TOKEN_LIST, "Parameters"), new Arg(STMT_LIST, "Body")]),
+        new Exp("If", [new Arg(EXPRESSION, "Condition"), new Arg(BASE_TYPE, "ThenBranch"), new Arg(BASE_TYPE, "ElseBranch")]),
+        new Exp("Print", [new Arg(EXPRESSION, "Body")]),
+        new Exp("Return", [new Arg(TOKEN_TYPE, "Keyword"), new Arg(EXPRESSION, "Value")]),
+        new Exp("Var", [new Arg(TOKEN_TYPE, "Name"), new Arg(EXPRESSION, "Initializer")]),
+        new Exp("While", [new Arg(EXPRESSION, "Condition"), new Arg(BASE_TYPE, "Body")])
+    };
 #>
-namespace Lox
+
+namespace Lox;
+
+public abstract class <#= BASE_TYPE #>
 {
-	public abstract class <#= BASE_TYPE #>
-	{
-
-
-	public interface IVisitor<T> 
-		{
+    public interface IVisitor<T> 
+    {
 <#		
-		PushIndent(INDENT + INDENT);
+	PushIndent(INDENT);
+	for(int i = 0; i < expressions.Length; i++) 
+	{
+		var current = expressions[i];
+		PushIndent(INDENT);
+		Write("T Visit(");
+		Write(current.Name);
+        Write(" _" + current.Name.ToLower());
+		WriteLine(");");
+		PopIndent();
+	}
+	PopIndent();
+#>
+    }
+
+	
+    /// <summary>
+    /// Base function for visiting our trees.
+    /// </summary> 
+    public abstract T Accept<T>(IVisitor<T> visitor);
+
+<#		
+	PushIndent(INDENT);
+	for(int i = 0; i < expressions.Length; i++) 
+	{
+		var current = expressions[i];
+		Write("public sealed class ");
+		Write(current.Name);
+		Write("(");
+		
+		for(int x = 0; x < current.Args.Length; x++)
 		{
-			for(int i = 0; i < expressions.Length; i++) 
+			var arg = current.Args[x];
+			Write(arg.Type);
+			Write(" ");
+			Write(arg.Name.ToLower());
+			if(x + 1 < current.Args.Length)
 			{
-				var current = expressions[i];
-				PushIndent(INDENT);
-				{
-					Write("T");
-					Write(" Visit(");
-					Write(current.name);
-					Write(" ");
-					Write("_" + current.name.ToLower());
-					WriteLine(");");
-				}
-				PopIndent();
+				Write(", ");
 			}
 		}
-		PopIndent();
-#>
-		}
-<#		
-		WriteLine(" ");
-		PushIndent(INDENT + INDENT);
-		for(int i = 0; i < expressions.Length; i++) 
+		Write(")");
+
+		Write(" : ");
+		WriteLine(BASE_TYPE);
+		WriteLine("{");
+		PushIndent(INDENT);
 		{
-			var current = expressions[i];
-			Write("public class ");
-			Write(current.name);
-			Write(" : ");
-			WriteLine(BASE_TYPE);
+			
+			for(int x = 0; x < current.Args.Length; x++)
+			{
+				var arg = current.Args[x];
+				Write("public ");
+				Write(arg.Type);
+				Write(" ");
+				Write(arg.Name);
+				Write("{ get; } = ");
+				Write(arg.Name.ToLower());
+				WriteLine(";");
+			}
+
+			// Visit Function
+			WriteLine(" ");
+			WriteLine("public override T Accept<T>(IVisitor<T> visitor)");
 			WriteLine("{");
 			PushIndent(INDENT);
-			{
-				// Fields
-				for(int x = 0; x < current.args.Length; x++)
-				{
-					var cArg = current.args[x];
-					Write("public ");
-					Write(cArg.type);
-					Write(" ");
-					Write(cArg.name);
-					WriteLine(";");
-				}
-
-				// Next Line
-				WriteLine(" ");
-
-				// Constructor
-				Write("public ");
-				Write(current.name);
-				Write("(");
-				for(int x = 0; x < current.args.Length; x++)
-				{
-					var cArg = current.args[x];
-					Write(cArg.type);
-					Write(" ");
-					Write(cArg.name);
-					if(x + 1 < current.args.Length)
-					{
-						Write(", ");
-					}
-				}
-				WriteLine(")");
-				WriteLine("{");
-				PushIndent(INDENT);
-				{
-					for(int x = 0; x < current.args.Length; x++)
-					{
-						var cArg = current.args[x];
-						Write("this.");
-						Write(cArg.name);
-						Write(" = ");
-						Write(cArg.name);
-						WriteLine(";");
-					}
-				}
-				PopIndent();
-				WriteLine("}");
-
-						
-				// Visit Function
-				WriteLine(" ");
-				WriteLine("public override T Accept<T>(IVisitor<T> visitor)");
-				WriteLine("{");
-				PushIndent(INDENT);
-				{
-					Write("return visitor.Visit");
-					WriteLine("(this);");
-				}
-				PopIndent();
-				WriteLine("}");
-			}
+			Write("return visitor.Visit");
+			WriteLine("(this);");
 			PopIndent();
 			WriteLine("}");
-
-
-			if(i + 1 < expressions.Length)
-			{
-				WriteLine("");
-			}
 		}
 		PopIndent();
-
+		WriteLine("}");
+	}
+	PopIndent();
 #>
-		/// <summary>
-		/// Base function for visiting our trees.
-		/// </summary> 
-		public abstract T Accept<T>(IVisitor<T> visitor);
-	}
 }
 
+<#+
+    public struct Arg(string type, string name)
+    {
+        public string Type { get; } = type;
+        public string Name { get; } = name;
+    }
 
-<#+ 
-public struct Exp
-{
-	public string name;
-	public Arg[] args;
-
-	public Exp(string name, params Arg[] args)
-	{
-		this.name = name;
-		this.args = args;
-	} 
-}
-
-public struct Arg 
-{
-	public string name;
-	public string type;
-
-	public Arg(string type, string name)
-	{
-		this.name = name;
-		this.type = type;
-	}
-}
+    public struct Exp(string name, Arg[] args)
+    {
+        public string Name { get; } = name;
+        public Arg[] Args { get; } = args;
+    }
 #>

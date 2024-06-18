@@ -1,47 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Lox;
 
-namespace Lox
-{ 
-    class LoxInstance
+internal class LoxInstance(LoxClass @class)
+{
+    private readonly Dictionary<string, object?> _fields = [];
+
+    public object? Get(Token name)
     {
-        private readonly LoxClass _class;
-        private readonly Dictionary<string, object> _fields = new Dictionary<string, object>();
-
-        public LoxInstance(LoxClass _class)
+        if (_fields.TryGetValue(name.lexeme, out object? value))
         {
-            this._class = _class;
+            return value;
         }
 
-        public object Get(Token name)
+        LoxFunction? method = @class.FindMethod(name.lexeme);
+        if (method != null) return method.Bind(this);
+
+        throw new RuntimeError(name, "Undefined property '" + name.lexeme + "'.");
+    }
+
+    public void Set(Token name, object? value)
+    {
+        if (!_fields.TryAdd(name.lexeme, value))
         {
-            if (_fields.ContainsKey(name.lexeme))
-            {
-                return _fields[name.lexeme];
-            }
-
-            LoxFunction method = _class.FindMethod(name.lexeme);
-            if (method != null) return method.Bind(this);
-
-            throw new RuntimeError(name, "Undefined property '" + name.lexeme + "'.");
+            _fields[name.lexeme] = value;
         }
+    }
 
-        public void Set(Token name, object value)
-        {
-            if (_fields.ContainsKey(name.lexeme))
-            {
-                _fields[name.lexeme] = value;
-            }
-            else
-            {
-                _fields.Add(name.lexeme, value);
-            }
-        }
-
-        public override string ToString()
-        {
-            return _class.Name + " instance.";
-        }
+    public override string ToString()
+    {
+        return @class.Name + " instance.";
     }
 }

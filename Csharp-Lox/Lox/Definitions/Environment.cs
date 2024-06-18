@@ -1,80 +1,76 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Lox;
 
-namespace Lox
+public class Environment
 {
-    public class Environment
+    private readonly Environment? _enclosing;
+    private readonly Dictionary<string, object?> _values = [];
+
+    public Environment()
+    { }
+
+    public Environment(Environment enclosing)
     {
-        public readonly Environment enclosing;
-        private readonly Dictionary<string, object> values = new Dictionary<string, object>();
+        _enclosing = enclosing;
+    }
 
-        public Environment()
+    public Environment? Enclosing => _enclosing;
+
+    public Environment Ancestor(int distance)
+    {
+        Environment environment = this;
+        for (int i = 0; i < distance; i++)
         {
-            enclosing = null;
+            if (environment.Enclosing == null) return environment;
+            environment = environment.Enclosing;
         }
 
-        public Environment(Environment enclosing)
+        return environment;
+    }
+
+    public void Assign(Token name, object? value)
+    {
+        if (_values.ContainsKey(name.lexeme))
         {
-            this.enclosing = enclosing;
+            _values[name.lexeme] = value;
+            return;
         }
 
-        //TODO: Handle trying to define a variable that is already defined.
-        public void Define(string name, object value)
+        if (Enclosing != null)
         {
-            values.Add(name, value);
+            Enclosing.Assign(name, value);
+            return;
         }
 
-        public Environment Ancestor(int distance)
-        {
-            Environment environment = this;
-            for (int i=0; i<distance; i++)
-            {
-                environment = environment.enclosing;
-            }
+        throw new RuntimeError(name,
+            "Undefined variable '" + name.lexeme + "'.");
+    }
 
-            return environment;
+    public void AssignAt(int distance, Token name, object? value)
+    {
+        Ancestor(distance)._values.Add(name.lexeme, value);
+    }
+
+    //TODO: Handle trying to define a variable that is already defined.
+    public void Define(string name, object? value)
+    {
+        _values.Add(name, value);
+    }
+
+    public object? Get(Token name)
+    {
+        if (_values.TryGetValue(name.lexeme, out object? value))
+        {
+            return value;
         }
 
-        public object Get(Token name)
-        {
-            if (values.ContainsKey(name.lexeme))
-            {
-                return values[name.lexeme];
-            }
+        if (Enclosing != null) return Enclosing.Get(name);
 
-            if (enclosing != null) return enclosing.Get(name);
+        throw new RuntimeError(name,
+            "Undefined variable '" + name.lexeme + "'.");
+    }
 
-            throw new RuntimeError(name,
-                "Undefined variable '" + name.lexeme + "'.");
-        }
-
-        public object GetAt(int distance, string name)
-        {
-            return Ancestor(distance).values[name];
-        }
-
-        public void Assign(Token name, object value)
-        {
-            if (values.ContainsKey(name.lexeme))
-            {
-                values[name.lexeme] = value;
-                return;
-            }
-
-            if (enclosing != null)
-            {
-                enclosing.Assign(name, value);
-                return;
-            }
-
-            throw new RuntimeError(name,
-                "Undefined variable '" + name.lexeme + "'.");
-        }
-
-        public void AssignAt(int distance, Token name, object value)
-        {
-            Ancestor(distance).values.Add(name.lexeme, value);
-        }
+    public object? GetAt(int distance, string name)
+    {
+        return Ancestor(distance)._values[name];
     }
 }

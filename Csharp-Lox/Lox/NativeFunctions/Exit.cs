@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Lox.NativeFunctions;
 
-namespace Lox.NativeFunctions
+internal class Exit : ICallable
 {
-    class Exit : ICallable
+    public int Arity { get => 0; set => throw new NotImplementedException(); }
+
+    public object? Call(Interpreter interpreter, IList<object?> arguments)
     {
-        public int Arity { get => 0; set => throw new NotImplementedException(); }
+        Lox.Exit(1);
 
-        public object Call(Interpreter interpreter, List<object> arguments)
-        {
-            Lox.Exit(1);
-
-            return null;
-        }
+        return null;
     }
 }
