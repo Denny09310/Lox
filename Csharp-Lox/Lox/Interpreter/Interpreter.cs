@@ -263,14 +263,6 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
         return null;
     }
 
-    public object? Visit(Statement.Print statement)
-    {
-        object? value = Evaluate(statement.Body);
-        Console.WriteLine(Stringify(value));
-
-        return null;
-    }
-
     public object? Visit(Statement.Var statement)
     {
         object? value = null;
@@ -421,27 +413,11 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
         return true;
     }
 
-    private static string Stringify(object? obj)
-    {
-        if (obj == null) return "nil";
-
-        if (obj is double)
-        {
-            string? text = obj.ToString();
-            if (!string.IsNullOrEmpty(text) && text.EndsWith(".0"))
-            {
-                text = text[0..(text.Length - 2)];
-            }
-            return text ?? string.Empty;
-        }
-
-        return obj.ToString() ?? string.Empty;
-    }
-
     private void DefineNativeFunctions()
     {
         Globals.Define("clock", new NativeFunctions.Clock());
         Globals.Define("exit", new NativeFunctions.Exit());
+        Globals.Define("print", new NativeFunctions.Print());
     }
 
     private object? Evaluate(Expression expr)

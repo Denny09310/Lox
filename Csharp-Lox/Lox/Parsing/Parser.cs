@@ -484,14 +484,6 @@ public class Parser(IList<Token> tokens)
         throw Error(Peek(), "Expect expression.");
     }
 
-    private Statement.Print PrintStatement()
-    {
-        Expression value = Expression();
-        Consume(TokenType.SEMICOLON, "Expect ';' after value.");
-
-        return new Statement.Print(value);
-    }
-
     private Statement.Return ReturnStatement()
     {
         Token keyword = Previous();
@@ -514,7 +506,6 @@ public class Parser(IList<Token> tokens)
     {
         if (Match(TokenType.FOR)) return ForStatement();
         if (Match(TokenType.IF)) return IfStatement();
-        if (Match(TokenType.PRINT)) return PrintStatement();
         if (Match(TokenType.RETURN)) return ReturnStatement();
         if (Match(TokenType.WHILE)) return WhileStatement();
         if (Match(TokenType.LEFT_BRACE)) return new Statement.Block(Block());
@@ -538,7 +529,6 @@ public class Parser(IList<Token> tokens)
                 case TokenType.FOR:
                 case TokenType.IF:
                 case TokenType.WHILE:
-                case TokenType.PRINT:
                 case TokenType.RETURN:
                     return;
             }

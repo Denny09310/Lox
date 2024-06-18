@@ -175,13 +175,6 @@ internal class Resolver(Interpreter interpreter) : Expression.IVisitor<object?>,
         return null;
     }
 
-    public object? Visit(Statement.Print statement)
-    {
-        Resolve(statement.Body);
-
-        return null;
-    }
-
     public object? Visit(Statement.Return statement)
     {
         if (_currentFunction == FunctionType.NONE)

@@ -10,7 +10,6 @@ public abstract class Statement
         T Visit(Inline statement);
         T Visit(Function statement);
         T Visit(If statement);
-        T Visit(Print statement);
         T Visit(Return statement);
         T Visit(Var statement);
         T Visit(While statement);
@@ -67,15 +66,6 @@ public abstract class Statement
         public Expression Condition{ get; } = condition;
         public Statement ThenBranch{ get; } = thenbranch;
         public Statement? ElseBranch{ get; } = elsebranch;
-         
-        public override T Accept<T>(IVisitor<T> visitor)
-        {
-            return visitor.Visit(this);
-        }
-    }
-    public sealed class Print(Expression body) : Statement
-    {
-        public Expression Body{ get; } = body;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {

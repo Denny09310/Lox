@@ -15,7 +15,6 @@
         new Exp("Inline", [new Arg(EXPRESSION, "Body")]),
         new Exp("Function", [new Arg(TOKEN_TYPE, "Name"), new Arg(TOKEN_LIST, "Parameters"), new Arg(STMT_LIST, "Body")]),
         new Exp("If", [new Arg(EXPRESSION, "Condition"), new Arg(BASE_TYPE, "ThenBranch"), new Arg("Statement?", "ElseBranch")]),
-        new Exp("Print", [new Arg(EXPRESSION, "Body")]),
         new Exp("Return", [new Arg(TOKEN_TYPE, "Keyword"), new Arg("Expression?", "Value")]),
         new Exp("Var", [new Arg(TOKEN_TYPE, "Name"), new Arg("Expression?", "Initializer")]),
         new Exp("While", [new Arg(EXPRESSION, "Condition"), new Arg(BASE_TYPE, "Body")])
