@@ -2,7 +2,7 @@
 
 namespace Lox;
 
-public class AstPrinter : Expression.IVisitor<string?>
+public class AbstractSyntaxTreeBuilder : Expression.IVisitor<string?>
 {
     public string? Print(Expression expr)
     {

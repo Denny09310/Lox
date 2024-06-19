@@ -15,7 +15,7 @@ public enum FunctionType
     NONE
 }
 
-public enum TokenType
+public enum SyntaxKind
 {
     //Single character tokens
     LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,

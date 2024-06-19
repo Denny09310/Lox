@@ -1,6 +1,6 @@
 ﻿namespace Lox;
 
-public class RuntimeException : LoxErrorException
+public class RuntimeException : LoxException
 {
     public RuntimeException(string message) : base(message)
     {

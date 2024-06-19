@@ -61,7 +61,7 @@ public abstract class <#= BASE_TYPE #>
 		for(int x = 0; x < current.Args.Length; x++)
 		{
 			var arg = current.Args[x];
-			Write(arg.Type);
+			Write(arg.Kind);
 			Write(" ");
 			Write(arg.Name.ToLower());
 			if(x + 1 < current.Args.Length)
@@ -81,7 +81,7 @@ public abstract class <#= BASE_TYPE #>
 			{
 				var arg = current.Args[x];
 				Write("public ");
-				Write(arg.Type);
+				Write(arg.Kind);
 				Write(" ");
 				Write(arg.Name);
 				Write("{ get; } = ");

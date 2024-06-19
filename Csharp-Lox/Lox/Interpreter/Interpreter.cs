@@ -77,48 +77,48 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
         object? left = Evaluate(expression.Left);
         object? right = Evaluate(expression.Right);
 
-        switch (expression.Opp.Type)
+        switch (expression.Opp.Kind)
         {
-            case TokenType.BANG_EQUAL:
+            case SyntaxKind.BANG_EQUAL:
                 CheckNumberOperand(expression.Opp, right);
                 return !IsEqual(left, right);
 
-            case TokenType.EQUAL_EQUAL:
+            case SyntaxKind.EQUAL_EQUAL:
                 CheckNumberOperand(expression.Opp, right);
                 return IsEqual(left, right);
 
-            case TokenType.GREATER:
+            case SyntaxKind.GREATER:
                 CheckNumberOperands(expression.Opp, left, right);
                 return (double)left > (double)right;
 
-            case TokenType.GREATER_EQUAL:
+            case SyntaxKind.GREATER_EQUAL:
                 CheckNumberOperands(expression.Opp, left, right);
                 return (double)left >= (double)right;
 
-            case TokenType.LESS:
+            case SyntaxKind.LESS:
                 CheckNumberOperands(expression.Opp, left, right);
                 return (double)left < (double)right;
 
-            case TokenType.LESS_EQUAL:
+            case SyntaxKind.LESS_EQUAL:
                 CheckNumberOperands(expression.Opp, left, right);
                 return (double)left <= (double)right;
 
-            case TokenType.MINUS:
+            case SyntaxKind.MINUS:
                 CheckNumberOperands(expression.Opp, left, right);
                 return (double)left - (double)right;
 
-            case TokenType.PLUS:
+            case SyntaxKind.PLUS:
                 if (left is double l1 && right is double r1) return l1 + r1;
                 if (left is string l2 && right is string r2) return l2 + r2;
                 if (left is string l3 && right is double r3) return l3 + r3.ToString();
                 throw new RuntimeException(expression.Opp, "Operands must be two numbers or two strings.");
 
-            case TokenType.SLASH:
+            case SyntaxKind.SLASH:
                 CheckNumberOperands(expression.Opp, left, right);
                 if (((double)right).Equals(0)) throw new RuntimeException(expression.Opp, "Cannot divide by zero.");
                 return (double)left / (double)right;
 
-            case TokenType.STAR:
+            case SyntaxKind.STAR:
                 CheckNumberOperands(expression.Opp, left, right);
                 return (double)left * (double)right;
         }
@@ -152,7 +152,7 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
     public object? Visit(Expression.Get expression)
     {
         object? target = Evaluate(expression.Target);
-        if (target is LoxInstance instance)
+        if (target is InstanceDefinition instance)
         {
             return instance.Get(expression.Name);
         }
@@ -174,7 +174,7 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
     {
         object? left = Evaluate(expression.Left);
 
-        if (expression.Opp.Type == TokenType.OR)
+        if (expression.Opp.Kind == SyntaxKind.OR)
         {
             if (IsTruthy(left)) return left;
         }
@@ -190,7 +190,7 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
     {
         object? target = Evaluate(expression.Target);
 
-        if (target is not LoxInstance instance)
+        if (target is not InstanceDefinition instance)
         {
             throw new RuntimeException(expression.Name, "Only instances have fields.");
         }
@@ -205,17 +205,17 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
     {
         int distance = _locals[expression];
 
-        if (_environment.GetAt(distance, "super") is not LoxClass superclass)
+        if (_environment.GetAt(distance, "super") is not ClassDefinition superclass)
         {
             throw new RuntimeException(expression.Keyword, $"The class does not inherit {expression.Method.Lexeme}");
         }
 
-        if (_environment.GetAt(distance, "super") is not LoxInstance instance)
+        if (_environment.GetAt(distance, "super") is not InstanceDefinition instance)
         {
             throw new RuntimeException(expression.Keyword, $"The class does not inherit {expression.Method.Lexeme}");
         }
 
-        LoxFunction method = superclass.FindMethod(expression.Method.Lexeme)
+        FunctionDefinition method = superclass.FindMethod(expression.Method.Lexeme)
             ?? throw new RuntimeException(expression.Method, "Undefined property '" + expression.Method.Lexeme + "'.");
 
         return method.Bind(instance);
@@ -230,13 +230,13 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
     {
         object? right = Evaluate(expression.Right);
 
-        switch (expression.Opp.Type)
+        switch (expression.Opp.Kind)
         {
-            case TokenType.MINUS:
+            case SyntaxKind.MINUS:
                 CheckNumberOperand(expression.Opp, right);
                 return -(double)right;
 
-            case TokenType.BANG:
+            case SyntaxKind.BANG:
                 return !IsTruthy(right);
 
             default:
@@ -306,7 +306,7 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
 
     public object? Visit(Statement.Function statement)
     {
-        LoxFunction func = new(statement, _environment, false);
+        FunctionDefinition func = new(statement, _environment, false);
         _environment.Define(statement.Name.Lexeme, func);
 
         return null;
@@ -329,7 +329,7 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
         }
 
         object? superclass = Evaluate(statement.Superclass);
-        if (superclass is not LoxClass superklass)
+        if (superclass is not ClassDefinition superklass)
         {
             throw new RuntimeException(statement.Superclass.Name, "Superclass must be a class.");
         }
@@ -342,14 +342,14 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
             _environment.Define("super", superklass);
         }
 
-        Dictionary<string, LoxFunction> methods = [];
+        Dictionary<string, FunctionDefinition> methods = [];
         foreach (Statement.Function method in statement.Methods)
         {
-            LoxFunction function = new(method, _environment, method.Name.Lexeme.Equals("init"));
+            FunctionDefinition function = new(method, _environment, method.Name.Lexeme.Equals("init"));
             methods.Add(method.Name.Lexeme, function);
         }
 
-        LoxClass klass = new(statement.Name.Lexeme, superklass, methods);
+        ClassDefinition klass = new(statement.Name.Lexeme, superklass, methods);
 
         if (_environment.Enclosing is null)
         {
@@ -369,12 +369,12 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
 
         CheckNumberOperand(expression.Opp, left);
 
-        switch (expression.Opp.Type)
+        switch (expression.Opp.Kind)
         {
-            case TokenType.PLUS_PLUS:
+            case SyntaxKind.PLUS_PLUS:
                 return (double)left + 1;
 
-            case TokenType.MINUS_MINUS:
+            case SyntaxKind.MINUS_MINUS:
                 return (double)left - 1;
 
             default:

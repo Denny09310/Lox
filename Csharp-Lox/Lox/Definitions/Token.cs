@@ -1,9 +1,9 @@
 ﻿namespace Lox;
 
-public record Token(TokenType Type, string Lexeme, object? Literal, int Line)
+public record Token(SyntaxKind Kind, string Lexeme, object? Literal, int Line)
 {
     public override string ToString()
     {
-        return Type + " " + Lexeme + " " + Literal;
+        return Kind + " " + Lexeme + " " + Literal;
     }
 }

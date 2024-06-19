@@ -1,15 +1,15 @@
 ﻿namespace Lox;
 
-internal class LoxFunction(Statement.Function declaration, Environment closure, bool isInitializer) : ICallable
+internal class FunctionDefinition(Statement.Function declaration, Environment closure, bool isInitializer) : ICallable
 {
     public int Arity { get => declaration.Parameters.Count; }
 
-    public LoxFunction Bind(LoxInstance instance)
+    public FunctionDefinition Bind(InstanceDefinition instance)
     {
         Environment environment = new(closure);
         environment.Define("this", instance);
 
-        return new LoxFunction(declaration, environment, isInitializer);
+        return new FunctionDefinition(declaration, environment, isInitializer);
     }
 
     public object? Call(Interpreter interpreter, IList<object?> arguments)

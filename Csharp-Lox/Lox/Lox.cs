@@ -14,7 +14,7 @@ public static class Lox
 
     public static void Error(Token token, string message)
     {
-        if (token.Type == TokenType.EOF)
+        if (token.Kind == SyntaxKind.EOF)
         {
             Report(token.Line, " at end", message);
         }

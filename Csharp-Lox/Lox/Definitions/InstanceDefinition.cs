@@ -1,6 +1,6 @@
 ﻿namespace Lox;
 
-internal class LoxInstance(LoxClass @class)
+internal class InstanceDefinition(ClassDefinition @class)
 {
     private readonly Dictionary<string, object?> _fields = [];
 
@@ -11,7 +11,7 @@ internal class LoxInstance(LoxClass @class)
             return value;
         }
 
-        LoxFunction? method = @class.FindMethod(name.Lexeme);
+        FunctionDefinition? method = @class.FindMethod(name.Lexeme);
         if (method != null) return method.Bind(this);
 
         throw new RuntimeException(name, "Undefined property '" + name.Lexeme + "'.");

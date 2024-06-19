@@ -2,23 +2,23 @@
 
 internal class Scanner(string source)
 {
-    private readonly Dictionary<string, TokenType> keywords = new()
+    private readonly Dictionary<string, SyntaxKind> keywords = new()
     {
-        { "and", TokenType.AND },
-        { "class", TokenType.CLASS },
-        { "else", TokenType.ELSE },
-        { "false", TokenType.FALSE },
-        { "for", TokenType.FOR },
-        { "fun", TokenType.FUN },
-        { "if", TokenType.IF },
-        { "nil", TokenType.NIL },
-        { "or", TokenType.OR },
-        { "return", TokenType.RETURN },
-        { "super", TokenType.SUPER },
-        { "this", TokenType.THIS },
-        { "true", TokenType.TRUE },
-        { "var", TokenType.VAR },
-        { "while", TokenType.WHILE }
+        { "and", SyntaxKind.AND },
+        { "class", SyntaxKind.CLASS },
+        { "else", SyntaxKind.ELSE },
+        { "false", SyntaxKind.FALSE },
+        { "for", SyntaxKind.FOR },
+        { "fun", SyntaxKind.FUN },
+        { "if", SyntaxKind.IF },
+        { "nil", SyntaxKind.NIL },
+        { "or", SyntaxKind.OR },
+        { "return", SyntaxKind.RETURN },
+        { "super", SyntaxKind.SUPER },
+        { "this", SyntaxKind.THIS },
+        { "true", SyntaxKind.TRUE },
+        { "var", SyntaxKind.VAR },
+        { "while", SyntaxKind.WHILE }
     };
 
     private readonly List<Token> _tokens = [];
@@ -39,7 +39,7 @@ internal class Scanner(string source)
             ScanToken();
         }
 
-        _tokens.Add(new Token(TokenType.EOF, "", null, _line));
+        _tokens.Add(new Token(SyntaxKind.EOF, "", null, _line));
         return _tokens;
     }
 
@@ -47,7 +47,7 @@ internal class Scanner(string source)
     /// Adds the token.
     /// </summary>
     /// <param name="type">The token type.</param>
-    private void AddToken(TokenType type)
+    private void AddToken(SyntaxKind type)
     {
         AddToken(type, null);
     }
@@ -57,7 +57,7 @@ internal class Scanner(string source)
     /// </summary>
     /// <param name="type">The token type.</param>
     /// <param name="literal">The token literal.</param>
-    private void AddToken(TokenType type, object? literal)
+    private void AddToken(SyntaxKind type, object? literal)
     {
         string text = source[_start.._current];
         _tokens.Add(new Token(type, text, literal, _line));
@@ -82,9 +82,9 @@ internal class Scanner(string source)
 
         string text = source[_start.._current];
 
-        if (!keywords.TryGetValue(text, out TokenType type))
+        if (!keywords.TryGetValue(text, out SyntaxKind type))
         {
-            type = TokenType.IDENTIFIER;
+            type = SyntaxKind.IDENTIFIER;
         }
 
         AddToken(type);
@@ -161,7 +161,7 @@ internal class Scanner(string source)
         Advance();
 
         string value = source.Substring(_start + 1, _current - _start - 2);
-        AddToken(TokenType.STRING, value);
+        AddToken(SyntaxKind.STRING, value);
     }
 
     /// <summary>
@@ -194,7 +194,7 @@ internal class Scanner(string source)
             while (IsDigit(Peek())) Advance();
         }
 
-        AddToken(TokenType.NUMBER, double.Parse(source[_start.._current]));
+        AddToken(SyntaxKind.NUMBER, double.Parse(source[_start.._current]));
     }
 
     /// <summary>
@@ -225,21 +225,21 @@ internal class Scanner(string source)
         char c = Advance();
         switch (c)
         {
-            case '(': AddToken(TokenType.LEFT_PAREN); break;
-            case ')': AddToken(TokenType.RIGHT_PAREN); break;
-            case '{': AddToken(TokenType.LEFT_BRACE); break;
-            case '}': AddToken(TokenType.RIGHT_BRACE); break;
-            case ',': AddToken(TokenType.COMMA); break;
-            case '.': AddToken(TokenType.DOT); break;
-            case '-': AddToken(Match('-') ? TokenType.MINUS_MINUS : TokenType.MINUS); break;
-            case '+': AddToken(Match('+') ? TokenType.PLUS_PLUS : TokenType.PLUS); break;
-            case ';': AddToken(TokenType.SEMICOLON); break;
-            case '*': AddToken(TokenType.STAR); break;
+            case '(': AddToken(SyntaxKind.LEFT_PAREN); break;
+            case ')': AddToken(SyntaxKind.RIGHT_PAREN); break;
+            case '{': AddToken(SyntaxKind.LEFT_BRACE); break;
+            case '}': AddToken(SyntaxKind.RIGHT_BRACE); break;
+            case ',': AddToken(SyntaxKind.COMMA); break;
+            case '.': AddToken(SyntaxKind.DOT); break;
+            case '-': AddToken(Match('-') ? SyntaxKind.MINUS_MINUS : SyntaxKind.MINUS); break;
+            case '+': AddToken(Match('+') ? SyntaxKind.PLUS_PLUS : SyntaxKind.PLUS); break;
+            case ';': AddToken(SyntaxKind.SEMICOLON); break;
+            case '*': AddToken(SyntaxKind.STAR); break;
 
-            case '!': AddToken(Match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
-            case '=': AddToken(Match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
-            case '<': AddToken(Match('=') ? TokenType.LESS_EQUAL : TokenType.LESS); break;
-            case '>': AddToken(Match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER); break;
+            case '!': AddToken(Match('=') ? SyntaxKind.BANG_EQUAL : SyntaxKind.BANG); break;
+            case '=': AddToken(Match('=') ? SyntaxKind.EQUAL_EQUAL : SyntaxKind.EQUAL); break;
+            case '<': AddToken(Match('=') ? SyntaxKind.LESS_EQUAL : SyntaxKind.LESS); break;
+            case '>': AddToken(Match('=') ? SyntaxKind.GREATER_EQUAL : SyntaxKind.GREATER); break;
 
             case '/':
                 if (Match('/'))
@@ -248,7 +248,7 @@ internal class Scanner(string source)
                 }
                 else
                 {
-                    AddToken(TokenType.SLASH);
+                    AddToken(SyntaxKind.SLASH);
                 }
                 break;
 

@@ -1,6 +1,6 @@
 ﻿namespace Lox;
 
-internal class ReturnException : LoxErrorException
+internal class ReturnException : LoxException
 {
     public ReturnException() : base()
     {

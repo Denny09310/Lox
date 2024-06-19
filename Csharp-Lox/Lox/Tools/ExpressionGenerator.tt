@@ -13,7 +13,8 @@
 	string TOKEN_TYPE = "Token";
 	string INDENT = "    ";
 
-	var expressions = new [] {
+	var expressions = new [] 
+	{
 		new Exp("Assign",   [new Arg(TOKEN_TYPE, "Name"),         new Arg(BASE_TYPE, "Value")]),
 		new Exp("Binary",   [new Arg(BASE_TYPE, "Left"),           new Arg(TOKEN_TYPE, "Opp"),      new Arg(BASE_TYPE, "Right")]),
 		new Exp("Call",     [new Arg(BASE_TYPE, "Callee"),        new Arg(TOKEN_TYPE, "Paren"),     new Arg("List<" + BASE_TYPE + ">", "Arguments")]),
@@ -73,7 +74,7 @@ public abstract class <#= BASE_TYPE #>
 		for(int x = 0; x < current.Args.Length; x++)
 		{
 			var arg = current.Args[x];
-			Write(arg.Type);
+			Write(arg.Kind);
 			Write(" ");
 			Write(arg.Name.ToLower());
 			if(x + 1 < current.Args.Length)
@@ -93,7 +94,7 @@ public abstract class <#= BASE_TYPE #>
 			{
 				var arg = current.Args[x];
 				Write("public ");
-				Write(arg.Type);
+				Write(arg.Kind);
 				Write(" ");
 				Write(arg.Name);
 				Write("{ get; } = ");
