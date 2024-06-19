@@ -210,7 +210,7 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
             throw new RuntimeException(expression.Keyword, $"The class does not inherit {expression.Method.Lexeme}");
         }
 
-        if (_environment.GetAt(distance, "super") is not InstanceDefinition instance)
+        if (_environment.GetAt(distance - 1, "this") is not InstanceDefinition instance)
         {
             throw new RuntimeException(expression.Keyword, $"The class does not inherit {expression.Method.Lexeme}");
         }
@@ -354,10 +354,10 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
             methods.Add(constructor.Name.Lexeme, function);
         }
 
-        ClassDefinition? superklass = superclass as ClassDefinition;
-        ClassDefinition @class = new(statement.Name.Lexeme, superklass, methods);
+        ClassDefinition? parent = superclass as ClassDefinition;
+        ClassDefinition @class = new(statement.Name.Lexeme, parent, methods);
 
-        if (superklass?.Superclass != null) _environment = _environment.Enclosing!;
+        if (parent != null) _environment = _environment.Enclosing!;
         _environment.Assign(statement.Name, @class);
 
         return null;
