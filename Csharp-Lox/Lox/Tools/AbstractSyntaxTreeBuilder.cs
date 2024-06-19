@@ -80,6 +80,11 @@ public class AbstractSyntaxTreeBuilder : Expression.IVisitor<string?>
         throw new NotImplementedException();
     }
 
+    public string? Visit(Expression.Ternary expression)
+    {
+        throw new NotImplementedException();
+    }
+
     private string Parenthesize(string name, params Expression[] exprs)
     {
         StringBuilder builder = new();

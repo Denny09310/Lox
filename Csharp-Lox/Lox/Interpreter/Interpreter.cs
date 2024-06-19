@@ -36,7 +36,7 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
         }
     }
 
-    public void Interpret(List<Statement> statements)
+    public void Interpret(IEnumerable<Statement> statements)
     {
         try
         {
@@ -382,6 +382,14 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
         }
 
         return null;
+    }
+
+    public object? Visit(Expression.Ternary expression)
+    {
+        object? value = Evaluate(expression.Condition);
+
+        if (IsTruthy(value)) return Evaluate(expression.TrueBranch);
+        return Evaluate(expression.FalseBranch);
     }
 
     private static void CheckNumberOperand(Token opp, [NotNull] object? operand)

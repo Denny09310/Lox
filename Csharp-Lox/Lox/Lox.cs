@@ -74,7 +74,7 @@ public static class Lox
         Scanner scanner = new(source);
         List<Token> tokens = scanner.ScanTokens();
         Parser parser = new(tokens);
-        List<Statement> statements = parser.Parse();
+        IList<Statement> statements = parser.Parse();
 
         //stop if there was a syntax error.
         if (_hadError) return;

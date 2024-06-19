@@ -8,6 +8,7 @@ public abstract class Expression
     {
         T Visit(Assign expression);
         T Visit(Binary expression);
+        T Visit(Ternary expression);
         T Visit(Call expression);
         T Visit(Get expression);
         T Visit(Grouping expression);
@@ -43,6 +44,17 @@ public abstract class Expression
         public Expression Left{ get; } = left;
         public Token Opp{ get; } = opp;
         public Expression Right{ get; } = right;
+         
+        public override T Accept<T>(IVisitor<T> visitor)
+        {
+            return visitor.Visit(this);
+        }
+    }
+    public sealed class Ternary(Expression condition, Expression truebranch, Expression falsebranch) : Expression
+    {
+        public Expression Condition{ get; } = condition;
+        public Expression TrueBranch{ get; } = truebranch;
+        public Expression FalseBranch{ get; } = falsebranch;
          
         public override T Accept<T>(IVisitor<T> visitor)
         {

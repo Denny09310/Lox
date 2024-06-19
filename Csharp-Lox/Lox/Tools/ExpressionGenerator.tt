@@ -15,20 +15,22 @@
 
 	var expressions = new [] 
 	{
-		new Exp("Assign",   [new Arg(TOKEN_TYPE, "Name"),         new Arg(BASE_TYPE, "Value")]),
-		new Exp("Binary",   [new Arg(BASE_TYPE, "Left"),           new Arg(TOKEN_TYPE, "Opp"),      new Arg(BASE_TYPE, "Right")]),
-		new Exp("Call",     [new Arg(BASE_TYPE, "Callee"),        new Arg(TOKEN_TYPE, "Paren"),     new Arg("List<" + BASE_TYPE + ">", "Arguments")]),
-		new Exp("Get",      [new Arg(BASE_TYPE, "Target"),        new Arg(TOKEN_TYPE, "Name")]),
-		new Exp("Grouping", [new Arg(BASE_TYPE, "Expression")]),   
-		new Exp("Literal",  [new Arg("object?", "Value")]),	     
-		new Exp("Logical",  [new Arg(BASE_TYPE, "Left"),          new Arg(TOKEN_TYPE, "Opp"), new Arg(BASE_TYPE, "Right")]),
-		new Exp("Set",      [new Arg(BASE_TYPE, "Target"),        new Arg(TOKEN_TYPE, "Name"),     new Arg(BASE_TYPE, "Value")]),
-		new Exp("Super",    [new Arg(TOKEN_TYPE, "Keyword"),      new Arg(TOKEN_TYPE, "Method")]),
-		new Exp("This",     [new Arg(TOKEN_TYPE, "Keyword")]),
+		new Exp("Assign",	   [new Arg(TOKEN_TYPE, "Name"),         new Arg(BASE_TYPE, "Value")]),
+		new Exp("Binary",	   [new Arg(BASE_TYPE, "Left"),          new Arg(TOKEN_TYPE, "Opp"),			new Arg(BASE_TYPE, "Right")]),
+		new Exp("Ternary",	   [new Arg(BASE_TYPE, "Condition"),     new Arg(BASE_TYPE, "TrueBranch"),		new Arg(BASE_TYPE, "FalseBranch")]),
+		new Exp("Call",		   [new Arg(BASE_TYPE, "Callee"),        new Arg(TOKEN_TYPE, "Paren"),			new Arg("List<" + BASE_TYPE + ">", "Arguments")]),
+		new Exp("Get",		   [new Arg(BASE_TYPE, "Target"),        new Arg(TOKEN_TYPE, "Name")]),
+		new Exp("Grouping",	   [new Arg(BASE_TYPE, "Expression")]),   
+		new Exp("Literal",	   [new Arg("object?", "Value")]),	     
+		new Exp("Logical",	   [new Arg(BASE_TYPE, "Left"),          new Arg(TOKEN_TYPE, "Opp"),			new Arg(BASE_TYPE, "Right")]),
+		new Exp("Set",		   [new Arg(BASE_TYPE, "Target"),        new Arg(TOKEN_TYPE, "Name"),			new Arg(BASE_TYPE, "Value")]),
+		new Exp("Super",	   [new Arg(TOKEN_TYPE, "Keyword"),      new Arg(TOKEN_TYPE, "Method")]),
+		new Exp("This",		   [new Arg(TOKEN_TYPE, "Keyword")]),
+		
 		// Prefix + Postfix == Unary
-		new Exp("Prefix",      [new Arg(TOKEN_TYPE, "Opp"),       new Arg(BASE_TYPE, "Right")]),
-		new Exp("Postfix",     [new Arg(TOKEN_TYPE, "Opp"),       new Arg(BASE_TYPE, "Left")]),
-		new Exp("Conditional", [new Arg(BASE_TYPE, "Expression"), new Arg(BASE_TYPE, "ThenBranch"), new Arg(BASE_TYPE, "ElseBranch")]),
+		new Exp("Prefix",      [new Arg(TOKEN_TYPE, "Opp"),			 new Arg(BASE_TYPE, "Right")]),
+		new Exp("Postfix",     [new Arg(TOKEN_TYPE, "Opp"),			 new Arg(BASE_TYPE, "Left")]),
+		new Exp("Conditional", [new Arg(BASE_TYPE, "Expression"),	 new Arg(BASE_TYPE, "ThenBranch"),		new Arg(BASE_TYPE, "ElseBranch")]),
 		new Exp("Variable", [new Arg(TOKEN_TYPE, "Name")])
 	};
 
@@ -74,7 +76,7 @@ public abstract class <#= BASE_TYPE #>
 		for(int x = 0; x < current.Args.Length; x++)
 		{
 			var arg = current.Args[x];
-			Write(arg.Kind);
+			Write(arg.Type);
 			Write(" ");
 			Write(arg.Name.ToLower());
 			if(x + 1 < current.Args.Length)
@@ -94,7 +96,7 @@ public abstract class <#= BASE_TYPE #>
 			{
 				var arg = current.Args[x];
 				Write("public ");
-				Write(arg.Kind);
+				Write(arg.Type);
 				Write(" ");
 				Write(arg.Name);
 				Write("{ get; } = ");

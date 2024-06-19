@@ -8,7 +8,7 @@ public class Parser(IList<Token> tokens)
     /// Parses the tokens and returns a list of statements to be executed.
     /// </summary>
     /// <returns>list of parsed statements</returns>
-    public List<Statement> Parse()
+    public IList<Statement> Parse()
     {
         List<Statement> statements = [];
         while (!IsAtEnd())
@@ -83,6 +83,10 @@ public class Parser(IList<Token> tokens)
 
             Error(equal, "Invalid assignment target.");
         }
+        else if (Match(SyntaxKind.QUESTION_MARK))
+        {
+            expr = Ternary(expr);
+        }
 
         return expr;
     }
@@ -144,12 +148,12 @@ public class Parser(IList<Token> tokens)
         return tokens[_current + 1].Kind == kind;
     }
 
-    private Statement.Class ClassDeclaration()
+    private Statement.Class Class()
     {
         Token name = Consume(SyntaxKind.IDENTIFIER, "Expect class name.");
 
         Expression.Variable? superclass = null;
-        if (Match(SyntaxKind.LESS))
+        if (Match(SyntaxKind.COLON))
         {
             Consume(SyntaxKind.IDENTIFIER, "Expect superclass name.");
             superclass = new Expression.Variable(Previous());
@@ -211,8 +215,8 @@ public class Parser(IList<Token> tokens)
         try
         {
             if (Match(SyntaxKind.FUN)) return Function("function");
-            if (Match(SyntaxKind.CLASS)) return ClassDeclaration();
-            if (Match(SyntaxKind.VAR)) return VarDeclaration();
+            if (Match(SyntaxKind.CLASS)) return Class();
+            if (Match(SyntaxKind.VAR)) return Var();
 
             return Statement();
         }
@@ -220,6 +224,21 @@ public class Parser(IList<Token> tokens)
         {
             Synchronize();
             return null;
+        }
+    }
+
+    private void EnsureNotTernaryOperator(Expression expression, Token keyword)
+    {
+        try
+        {
+            if (expression is Expression.Ternary)
+            {
+                throw Error(keyword, "Ternary operator should be used only for assignments");
+            }
+        }
+        finally
+        {
+            Synchronize();
         }
     }
 
@@ -240,14 +259,6 @@ public class Parser(IList<Token> tokens)
     private Expression Expression()
     {
         return Assignment();
-    }
-
-    private Statement.Inline ExpressionStatement()
-    {
-        Expression expr = Expression();
-        Consume(SyntaxKind.SEMICOLON, "Expect ';' after value.");
-
-        return new Statement.Inline(expr);
     }
 
     private Expression.Call FinishCall(Expression callee)
@@ -282,18 +293,22 @@ public class Parser(IList<Token> tokens)
         }
         else if (Match(SyntaxKind.VAR))
         {
-            initializer = VarDeclaration();
+            initializer = Var();
         }
         else
         {
-            initializer = ExpressionStatement();
+            initializer = Inline();
         }
 
         Expression? condition = null;
         if (!Check(SyntaxKind.SEMICOLON))
         {
+            var semicolon = Peek();
             condition = Expression();
+
+            EnsureNotTernaryOperator(condition, semicolon);
         }
+
         Consume(SyntaxKind.SEMICOLON, "Expect ';' after for condition.");
 
         Expression? increment = null;
@@ -355,8 +370,11 @@ public class Parser(IList<Token> tokens)
     /// <returns></returns>
     private Statement.If IfStatement()
     {
-        Consume(SyntaxKind.LEFT_PAREN, "Expect '(' after 'if'.");
+        var paren = Consume(SyntaxKind.LEFT_PAREN, "Expect '(' after 'if'.");
         Expression condition = Expression();
+
+        EnsureNotTernaryOperator(condition, paren);
+
         Consume(SyntaxKind.RIGHT_PAREN, "Expect ')' after if condition.");
 
         Statement thenBranch = Statement();
@@ -368,6 +386,14 @@ public class Parser(IList<Token> tokens)
         }
 
         return new Statement.If(condition, thenBranch, elseBranch);
+    }
+
+    private Statement.Inline Inline()
+    {
+        Expression expr = Expression();
+        Consume(SyntaxKind.SEMICOLON, "Expect ';' after value.");
+
+        return new Statement.Inline(expr);
     }
 
     private bool IsAtEnd()
@@ -457,9 +483,9 @@ public class Parser(IList<Token> tokens)
         return Call();
     }
 
-    private Token Previous()
+    private Token Previous(int amount = 1)
     {
-        return tokens[_current - 1];
+        return tokens[_current - amount];
     }
 
     private Expression Primary()
@@ -477,7 +503,7 @@ public class Parser(IList<Token> tokens)
         {
             Token keyword = Previous();
             Consume(SyntaxKind.DOT, "Expect '.' after 'super'.");
-            Token method = Consume(SyntaxKind.IDENTIFIER, "Expect superclass method name after '.'");
+            Token method = Consume([SyntaxKind.CONSTRUCTOR, SyntaxKind.IDENTIFIER], "Expect superclass method name after '.'");
 
             return new Expression.Super(keyword, method);
         }
@@ -525,7 +551,7 @@ public class Parser(IList<Token> tokens)
         if (Match(SyntaxKind.WHILE)) return WhileStatement();
         if (Match(SyntaxKind.LEFT_BRACE)) return new Statement.Block(Block());
 
-        return ExpressionStatement();
+        return Inline();
     }
 
     private void Synchronize()
@@ -552,6 +578,14 @@ public class Parser(IList<Token> tokens)
         }
     }
 
+    private Expression.Ternary Ternary(Expression condition)
+    {
+        Expression trueBranch = Expression();
+        Consume(SyntaxKind.COLON, "Expect ':' after true branch of ternary operator.");
+        Expression falseBranch = Assignment();
+        return new Expression.Ternary(condition, trueBranch, falseBranch);
+    }
+
     private Expression Unary()
     {
         if (Match(SyntaxKind.BANG, SyntaxKind.MINUS))
@@ -564,7 +598,7 @@ public class Parser(IList<Token> tokens)
         return Postfix();
     }
 
-    private Statement.Var VarDeclaration()
+    private Statement.Var Var()
     {
         Token name = Consume(SyntaxKind.IDENTIFIER, "Expect variable name.");
 
@@ -580,8 +614,10 @@ public class Parser(IList<Token> tokens)
 
     private Statement.While WhileStatement()
     {
-        Consume(SyntaxKind.LEFT_PAREN, "Expect '(' after 'while'.");
+        var paren = Consume(SyntaxKind.LEFT_PAREN, "Expect '(' after 'while'.");
         Expression condition = Expression();
+
+        EnsureNotTernaryOperator(condition, paren);
         Consume(SyntaxKind.RIGHT_PAREN, "Expect ')' after condition.");
 
         Statement body = Statement();

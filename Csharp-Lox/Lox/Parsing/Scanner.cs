@@ -241,6 +241,8 @@ internal class Scanner(string source)
             case '=': AddToken(Match('=') ? SyntaxKind.EQUAL_EQUAL : SyntaxKind.EQUAL); break;
             case '<': AddToken(Match('=') ? SyntaxKind.LESS_EQUAL : SyntaxKind.LESS); break;
             case '>': AddToken(Match('=') ? SyntaxKind.GREATER_EQUAL : SyntaxKind.GREATER); break;
+            case '?': AddToken(SyntaxKind.QUESTION_MARK); break;
+            case ':': AddToken(SyntaxKind.COLON); break;
 
             case '/':
                 if (Match('/'))

@@ -333,5 +333,13 @@ internal class Resolver(Interpreter interpreter) : Expression.IVisitor<object?>,
         return null;
     }
 
+    public object? Visit(Expression.Ternary expression)
+    {
+        Resolve(expression.Condition);
+        Resolve(expression.TrueBranch);
+        Resolve(expression.FalseBranch);
+        return null;
+    }
+
     #endregion "Expression Visitors"
 }
