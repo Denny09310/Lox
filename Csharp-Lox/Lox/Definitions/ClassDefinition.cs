@@ -1,23 +1,23 @@
 ﻿namespace Lox;
 
-internal class ClassDefinition(string name, ClassDefinition superclass, Dictionary<string, FunctionDefinition> methods) : ICallable
+internal class ClassDefinition(string name, ClassDefinition? superclass, Dictionary<string, FunctionDefinition> methods) : ICallable
 {
     public int Arity
     {
         get
         {
-            FunctionDefinition? initializer = FindMethod("init");
+            FunctionDefinition? initializer = FindMethod("constructor");
             return (initializer == null) ? 0 : initializer.Arity;
         }
     }
 
     public string Name { get; } = name;
-    public ClassDefinition Superclass { get; } = superclass;
+    public ClassDefinition? Superclass { get; } = superclass;
 
     public object? Call(Interpreter interpreter, IList<object?> arguments)
     {
         InstanceDefinition instance = new(this);
-        FunctionDefinition? initializer = FindMethod("init");
+        FunctionDefinition? initializer = FindMethod("constructor");
         initializer?.Bind(instance).Call(interpreter, arguments);
 
         return instance;

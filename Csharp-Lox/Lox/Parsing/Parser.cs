@@ -158,14 +158,21 @@ public class Parser(IList<Token> tokens)
         Consume(SyntaxKind.LEFT_BRACE, "Expect '{' before class body.");
 
         List<Statement.Function> methods = [];
+        Statement.Function? constructor = null;
         while (!Check(SyntaxKind.RIGHT_BRACE) && !IsAtEnd())
         {
+            if (Check(SyntaxKind.CONSTRUCTOR))
+            {
+                constructor = Function("method");
+                continue;
+            }
+
             methods.Add(Function("method"));
         }
 
         Consume(SyntaxKind.RIGHT_BRACE, "Expect '}' after class body.");
 
-        return new Statement.Class(name, superclass, methods);
+        return new Statement.Class(name, constructor, superclass, methods);
     }
 
     private Expression Comparison()
@@ -186,6 +193,12 @@ public class Parser(IList<Token> tokens)
     {
         if (Check(kind)) return Advance();
 
+        throw Error(Peek(), message);
+    }
+
+    private Token Consume(SyntaxKind[] kinds, string message)
+    {
+        if (Array.Exists(kinds, Check)) return Advance();
         throw Error(Peek(), message);
     }
 
@@ -310,7 +323,8 @@ public class Parser(IList<Token> tokens)
 
     private Statement.Function Function(string kind)
     {
-        Token name = Consume(SyntaxKind.IDENTIFIER, "Expect " + kind + " name.");
+        Token name = Consume([SyntaxKind.CONSTRUCTOR, SyntaxKind.IDENTIFIER], "Expect " + kind + " name.");
+
         Consume(SyntaxKind.LEFT_PAREN, "Expect '(' after " + kind + "name.");
 
         List<Token> parameters = [];
@@ -324,7 +338,8 @@ public class Parser(IList<Token> tokens)
                 }
 
                 parameters.Add(Consume(SyntaxKind.IDENTIFIER, "Expect parameter name."));
-            } while (Match(SyntaxKind.COMMA));
+            }
+            while (Match(SyntaxKind.COMMA));
         }
 
         Consume(SyntaxKind.RIGHT_PAREN, "Expect ')' after parameters.");

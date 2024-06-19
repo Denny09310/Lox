@@ -30,9 +30,10 @@ public abstract class Statement
             return visitor.Visit(this);
         }
     }
-    public sealed class Class(Token name, Expression.Variable? superclass, IEnumerable<Statement.Function> methods) : Statement
+    public sealed class Class(Token name, Function? constructor, Expression.Variable? superclass, IEnumerable<Statement.Function> methods) : Statement
     {
         public Token Name{ get; } = name;
+        public Function? Constructor{ get; } = constructor;
         public Expression.Variable? Superclass{ get; } = superclass;
         public IEnumerable<Statement.Function> Methods{ get; } = methods;
          
