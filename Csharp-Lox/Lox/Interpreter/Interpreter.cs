@@ -195,7 +195,7 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
             throw new RuntimeException(expression.Name, "Only instances have fields.");
         }
 
-        object? value = Evaluate(expression.Target);
+        object? value = Evaluate(expression.Value);
         instance.Set(expression.Name, value);
 
         return value;
@@ -323,42 +323,42 @@ internal class Interpreter : Expression.IVisitor<object?>, Statement.IVisitor<ob
 
     public object? Visit(Statement.Class statement)
     {
-        if (statement.Superclass == null)
+        object? superclass = null;
+        if (statement.Superclass != null)
         {
-            return null;
-        }
-
-        object? superclass = Evaluate(statement.Superclass);
-        if (superclass is not ClassDefinition superklass)
-        {
-            throw new RuntimeException(statement.Superclass.Name, "Superclass must be a class.");
+            superclass = Evaluate(statement.Superclass);
+            if (superclass is not ClassDefinition)
+            {
+                throw new RuntimeException(statement.Superclass.Name, "Superclass must be a class.");
+            }
         }
 
         _environment.Define(statement.Name.Lexeme, null);
 
-        if (statement.Superclass != null)
+        if (superclass != null)
         {
             _environment = new Environment(_environment);
-            _environment.Define("super", superklass);
+            _environment.Define("super", superclass);
         }
 
         Dictionary<string, FunctionDefinition> methods = [];
         foreach (Statement.Function method in statement.Methods)
         {
-            FunctionDefinition function = new(method, _environment, method.Name.Lexeme.Equals("init"));
+            FunctionDefinition function = new(method, _environment);
             methods.Add(method.Name.Lexeme, function);
         }
 
-        ClassDefinition klass = new(statement.Name.Lexeme, superklass, methods);
-
-        if (_environment.Enclosing is null)
+        if (statement.Constructor is Statement.Function constructor)
         {
-            return null;
+            FunctionDefinition function = new(constructor, _environment, constructor: true);
+            methods.Add(constructor.Name.Lexeme, function);
         }
 
-        if (superklass.Superclass != null) _environment = _environment.Enclosing;
+        ClassDefinition? superklass = superclass as ClassDefinition;
+        ClassDefinition @class = new(statement.Name.Lexeme, superklass, methods);
 
-        _environment.Assign(statement.Name, klass);
+        if (superklass?.Superclass != null) _environment = _environment.Enclosing!;
+        _environment.Assign(statement.Name, @class);
 
         return null;
     }

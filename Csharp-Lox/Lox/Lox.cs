@@ -2,7 +2,7 @@
 
 public static class Lox
 {
-    private static readonly Interpreter interpreter = new();
+    private static readonly Interpreter _interpreter = new();
 
     private static bool _hadError = false;
     private static bool _hadRuntimeError = false;
@@ -48,8 +48,10 @@ public static class Lox
         {
             Console.Write("> ");
             var source = Console.ReadLine();
+
             if (source == null) continue;
             if (source == ExitCommand) break;
+
             Run(source);
             _hadError = false;
         }
@@ -77,12 +79,12 @@ public static class Lox
         //stop if there was a syntax error.
         if (_hadError) return;
 
-        Resolver resolver = new(interpreter);
+        Resolver resolver = new(_interpreter);
         resolver.Resolve(statements);
 
         //stop if there was a resolution error.
         if (_hadError) return;
 
-        interpreter.Interpret(statements);
+        _interpreter.Interpret(statements);
     }
 }

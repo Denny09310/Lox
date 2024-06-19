@@ -14,14 +14,14 @@ public class Environment
     }
 
     public Environment? Enclosing => _enclosing;
+    private Dictionary<string, object?> Values => _values;
 
     public Environment Ancestor(int distance)
     {
         Environment environment = this;
         for (int i = 0; i < distance; i++)
         {
-            if (environment.Enclosing == null) return environment;
-            environment = environment.Enclosing;
+            environment = environment.Enclosing!;
         }
 
         return environment;
@@ -29,9 +29,9 @@ public class Environment
 
     public void Assign(Token name, object? value)
     {
-        if (_values.ContainsKey(name.Lexeme))
+        if (Values.ContainsKey(name.Lexeme))
         {
-            _values[name.Lexeme] = value;
+            Values[name.Lexeme] = value;
             return;
         }
 
@@ -47,18 +47,26 @@ public class Environment
 
     public void AssignAt(int distance, Token name, object? value)
     {
-        Ancestor(distance)._values.Add(name.Lexeme, value);
+        Environment ancestor = Ancestor(distance);
+        if (ancestor.Values.ContainsKey(name.Lexeme))
+        {
+            ancestor.Values[name.Lexeme] = value;
+        }
+        else
+        {
+            throw new RuntimeException(name, "Undefined variable '" + name.Lexeme + "' at distance " + distance + ".");
+        }
     }
 
     //TODO: Handle trying to define a variable that is already defined.
     public void Define(string name, object? value)
     {
-        _values.Add(name, value);
+        Values.Add(name, value);
     }
 
     public object? Get(Token name)
     {
-        if (_values.TryGetValue(name.Lexeme, out object? value))
+        if (Values.TryGetValue(name.Lexeme, out object? value))
         {
             return value;
         }
@@ -71,6 +79,12 @@ public class Environment
 
     public object? GetAt(int distance, string name)
     {
-        return Ancestor(distance)._values[name];
+        Environment ancestor = Ancestor(distance);
+        if (ancestor.Values.TryGetValue(name, out object? value))
+        {
+            return value;
+        }
+        throw new RuntimeException(new Token(SyntaxKind.IDENTIFIER, name, null, 0),
+            "Undefined variable '" + name + "' at distance " + distance + ".");
     }
 }

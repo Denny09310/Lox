@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Lox": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Users\\dkoja\\Downloads\\constructor.lox\""
+    }
+  }
+}

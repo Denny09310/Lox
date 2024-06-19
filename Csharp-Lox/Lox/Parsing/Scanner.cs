@@ -2,7 +2,7 @@
 
 internal class Scanner(string source)
 {
-    private readonly Dictionary<string, SyntaxKind> keywords = new()
+    private readonly Dictionary<string, SyntaxKind> _keywords = new()
     {
         { "and", SyntaxKind.AND },
         { "class", SyntaxKind.CLASS },
@@ -18,7 +18,8 @@ internal class Scanner(string source)
         { "this", SyntaxKind.THIS },
         { "true", SyntaxKind.TRUE },
         { "var", SyntaxKind.VAR },
-        { "while", SyntaxKind.WHILE }
+        { "while", SyntaxKind.WHILE },
+        { "constructor", SyntaxKind.CONSTRUCTOR },
     };
 
     private readonly List<Token> _tokens = [];
@@ -41,6 +42,44 @@ internal class Scanner(string source)
 
         _tokens.Add(new Token(SyntaxKind.EOF, "", null, _line));
         return _tokens;
+    }
+
+    /// <summary>
+    /// Determines whether the specified char is alpha.
+    /// </summary>
+    /// <param name="c">The char.</param>
+    /// <returns>
+    ///   <c>true</c> if the specified char is alpha; otherwise, <c>false</c>.
+    /// </returns>
+    private static bool IsAlpha(char c)
+    {
+        return (c >= 'a' && c <= 'z') ||
+               (c >= 'A' && c <= 'Z') ||
+               (c == '_');
+    }
+
+    /// <summary>
+    /// Determines whether the specifed char is alpha numeric.
+    /// </summary>
+    /// <param name="c">The char.</param>
+    /// <returns>
+    ///   <c>true</c> if the specified char is alpha numeric; otherwise, <c>false</c>.
+    /// </returns>
+    private static bool IsAlphaNumeric(char c)
+    {
+        return IsAlpha(c) || IsDigit(c);
+    }
+
+    /// <summary>
+    /// Determines whether the specified char is a digit.
+    /// </summary>
+    /// <param name="c">The char.</param>
+    /// <returns>
+    ///   <c>true</c> if the specified char is digit; otherwise, <c>false</c>.
+    /// </returns>
+    private static bool IsDigit(char c)
+    {
+        return c >= '0' && c <= '9';
     }
 
     /// <summary>
@@ -82,38 +121,12 @@ internal class Scanner(string source)
 
         string text = source[_start.._current];
 
-        if (!keywords.TryGetValue(text, out SyntaxKind type))
+        if (!_keywords.TryGetValue(text, out SyntaxKind type))
         {
             type = SyntaxKind.IDENTIFIER;
         }
 
         AddToken(type);
-    }
-
-    /// <summary>
-    /// Determines whether the specified char is alpha.
-    /// </summary>
-    /// <param name="c">The char.</param>
-    /// <returns>
-    ///   <c>true</c> if the specified char is alpha; otherwise, <c>false</c>.
-    /// </returns>
-    private static bool IsAlpha(char c)
-    {
-        return (c >= 'a' && c <= 'z') ||
-               (c >= 'A' && c <= 'Z') ||
-               (c == '_');
-    }
-
-    /// <summary>
-    /// Determines whether the specifed char is alpha numeric.
-    /// </summary>
-    /// <param name="c">The char.</param>
-    /// <returns>
-    ///   <c>true</c> if the specified char is alpha numeric; otherwise, <c>false</c>.
-    /// </returns>
-    private static bool IsAlphaNumeric(char c)
-    {
-        return IsAlpha(c) || IsDigit(c);
     }
 
     /// <summary>
@@ -125,18 +138,6 @@ internal class Scanner(string source)
     private bool IsAtEnd()
     {
         return _current >= source.Length;
-    }
-
-    /// <summary>
-    /// Determines whether the specified char is a digit.
-    /// </summary>
-    /// <param name="c">The char.</param>
-    /// <returns>
-    ///   <c>true</c> if the specified char is digit; otherwise, <c>false</c>.
-    /// </returns>
-    private static bool IsDigit(char c)
-    {
-        return c >= '0' && c <= '9';
     }
 
     /// <summary>

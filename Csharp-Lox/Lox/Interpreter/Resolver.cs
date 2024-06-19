@@ -63,8 +63,7 @@ internal class Resolver(Interpreter interpreter) : Expression.IVisitor<object?>,
 
     private void ResolveFunction(Statement.Function function, FunctionType type)
     {
-        FunctionType enclosingFunction = _currentFunction;
-        _currentFunction = type;
+        (FunctionType enclosingFunction, _currentFunction) = (_currentFunction, type);
 
         BeginScope();
         foreach (Token param in function.Parameters)
@@ -81,16 +80,16 @@ internal class Resolver(Interpreter interpreter) : Expression.IVisitor<object?>,
 
     private void ResolveLocal(Expression expr, Token name)
     {
-        for (int i = _scopes.Count - 1; i >= 0; i--)
+        for (int i = 0; i < _scopes.Count; i++)
         {
-            if (_scopes.ToArray()[i].ContainsKey(name.Lexeme))
+            if (_scopes.ElementAt(i).ContainsKey(name.Lexeme))
             {
-                interpreter.Resolve(expr, _scopes.Count - 1 - i);
+                interpreter.Resolve(expr, i);
                 return;
             }
         }
 
-        //Not found locally.  Assume global.
+        // Not found locally. Assume global.
     }
 
     #endregion "Private Helpers"
@@ -108,26 +107,21 @@ internal class Resolver(Interpreter interpreter) : Expression.IVisitor<object?>,
 
     public object? Visit(Statement.Class statement)
     {
-        ClassType enclosingClass = _currentClass;
-        _currentClass = ClassType.CLASS;
+        (ClassType enclosingClass, _currentClass) = (_currentClass, ClassType.CLASS);
 
         Declare(statement.Name);
         Define(statement.Name);
 
-        if ((statement.Superclass != null) &&
-            statement.Name.Lexeme.Equals(statement.Superclass.Name.Lexeme))
-        {
-            Lox.Error(statement.Superclass.Name, "A class cannot inherit from itself.");
-        }
-
         if (statement.Superclass != null)
         {
+            if (statement.Name.Lexeme.Equals(statement.Superclass.Name.Lexeme))
+            {
+                Lox.Error(statement.Superclass.Name, "A class cannot inherit from itself.");
+            }
+
             _currentClass = ClassType.SUBCLASS;
             Resolve(statement.Superclass);
-        }
 
-        if (statement.Superclass != null)
-        {
             BeginScope();
             _scopes.Peek().Add("super", true);
         }
@@ -137,8 +131,12 @@ internal class Resolver(Interpreter interpreter) : Expression.IVisitor<object?>,
 
         foreach (Statement.Function method in statement.Methods)
         {
-            FunctionType declaration = (method.Name.Lexeme.Equals("init")) ? FunctionType.INITIALIZER : FunctionType.METHOD;
-            ResolveFunction(method, declaration);
+            ResolveFunction(method, FunctionType.METHOD);
+        }
+
+        if (statement.Constructor != null)
+        {
+            ResolveFunction(statement.Constructor, FunctionType.CONSTRUCTOR);
         }
 
         EndScope();
@@ -184,7 +182,7 @@ internal class Resolver(Interpreter interpreter) : Expression.IVisitor<object?>,
 
         if (statement.Value != null)
         {
-            if (_currentFunction == FunctionType.INITIALIZER)
+            if (_currentFunction == FunctionType.CONSTRUCTOR)
             {
                 Lox.Error(statement.Keyword, "Cannot return a value from an initializer.");
             }

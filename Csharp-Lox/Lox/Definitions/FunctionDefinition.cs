@@ -1,15 +1,15 @@
 ﻿namespace Lox;
 
-internal class FunctionDefinition(Statement.Function declaration, Environment closure, bool isInitializer) : ICallable
+internal class FunctionDefinition(Statement.Function declaration, Environment closure, bool constructor = false) : ICallable
 {
-    public int Arity { get => declaration.Parameters.Count; }
+    public int Arity { get; } = declaration.Parameters.Count;
 
     public FunctionDefinition Bind(InstanceDefinition instance)
     {
         Environment environment = new(closure);
         environment.Define("this", instance);
 
-        return new FunctionDefinition(declaration, environment, isInitializer);
+        return new FunctionDefinition(declaration, environment, constructor);
     }
 
     public object? Call(Interpreter interpreter, IList<object?> arguments)
@@ -27,12 +27,12 @@ internal class FunctionDefinition(Statement.Function declaration, Environment cl
         }
         catch (ReturnException returnValue)
         {
-            if (isInitializer) return closure.GetAt(0, "this");
+            if (constructor) return closure.GetAt(0, "this");
 
             return returnValue.Value;
         }
 
-        if (isInitializer) return closure.GetAt(0, "this");
+        if (constructor) return closure.GetAt(0, "this");
 
         return null;
     }

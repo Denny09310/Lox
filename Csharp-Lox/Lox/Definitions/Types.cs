@@ -10,7 +10,7 @@ public enum ClassType
 public enum FunctionType
 {
     FUNCTION,
-    INITIALIZER,
+    CONSTRUCTOR,
     METHOD,
     NONE
 }
@@ -35,7 +35,7 @@ public enum SyntaxKind
     IDENTIFIER, STRING, NUMBER,
 
     //Keywords
-    AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
+    AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR, CONSTRUCTOR,
 
     RETURN, SUPER, THIS, TRUE, VAR, WHILE,
 

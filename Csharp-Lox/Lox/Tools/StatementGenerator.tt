@@ -11,7 +11,7 @@
     var expressions = new [] 
     {
         new Exp("Block", [new Arg(STMT_LIST, "Statements")]),
-        new Exp("Class", [new Arg(TOKEN_TYPE, "Name"), new Arg("Expression.Variable?", "Superclass"), new Arg("IEnumerable<Statement.Function>", "Methods")]),
+        new Exp("Class", [new Arg(TOKEN_TYPE, "Name"), new Arg("Function?", "Constructor"), new Arg("Expression.Variable?", "Superclass"), new Arg("IEnumerable<Statement.Function>", "Methods")]),
         new Exp("Inline", [new Arg(EXPRESSION, "Body")]),
         new Exp("Function", [new Arg(TOKEN_TYPE, "Name"), new Arg(TOKEN_LIST, "Parameters"), new Arg(STMT_LIST, "Body")]),
         new Exp("If", [new Arg(EXPRESSION, "Condition"), new Arg(BASE_TYPE, "ThenBranch"), new Arg("Statement?", "ElseBranch")]),
@@ -61,7 +61,7 @@ public abstract class <#= BASE_TYPE #>
 		for(int x = 0; x < current.Args.Length; x++)
 		{
 			var arg = current.Args[x];
-			Write(arg.Kind);
+			Write(arg.Type);
 			Write(" ");
 			Write(arg.Name.ToLower());
 			if(x + 1 < current.Args.Length)
@@ -81,7 +81,7 @@ public abstract class <#= BASE_TYPE #>
 			{
 				var arg = current.Args[x];
 				Write("public ");
-				Write(arg.Kind);
+				Write(arg.Type);
 				Write(" ");
 				Write(arg.Name);
 				Write("{ get; } = ");
